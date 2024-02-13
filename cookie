@@ -1,0 +1,38 @@
+#!/bin/bash
+
+cmd=$1
+read -r -d '' USAGE<< EOF
+Commands are:
+ init add commit push checkout status help
+EOF
+
+export PROJECT_DIR="$PWD/.cookie"
+export BIN="/home/cookie/Licenta"
+$BIN/config
+
+case $cmd in
+    init)
+        $BIN/init ${@:2}
+    ;;
+    add)
+        echo "Adding file(s)..."
+    ;;
+    commit)
+        echo "Committing to staging area..."
+    ;;
+    push)
+        echo "Pushing to remote..."
+    ;;
+    checkout)
+        echo "Checking out branch..."
+    ;;
+    status)
+        echo "Printing status..."
+    ;;
+    ?|help)
+      echo "Usage: $(basename $0) [command_name]"
+      echo "$USAGE"
+      exit 1
+    ;;
+esac
+
