@@ -1,6 +1,5 @@
 from Object import Object
 import os 
-from errors import NoSuchObjectException
 
 # Commit --> struct{
 #     parents : array{Commit}
@@ -11,6 +10,6 @@ from errors import NoSuchObjectException
 # }
 
 class Commit(Object):
-    def __init__(self) -> None:
+    def __init__(self,metaData) -> None:
         super().__init__()
-    
+        pass
