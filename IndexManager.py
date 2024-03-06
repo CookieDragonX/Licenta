@@ -13,13 +13,14 @@ def statDictionary(mode):
     dictionary['ctime']=mode.st_ctime
     return dictionary
 
+
 def getIndex(dir, data):
     for file in os.listdir(dir):
         pathname = os.path.join(dir, file)
         mode = os.lstat(pathname)
         if S_ISDIR(mode.st_mode) or S_ISREG(mode.st_mode):
             data[pathname]=statDictionary(mode)
-            if S_ISDIR(mode.st_mode):
+            if S_ISDIR(mode.st_mode) and file!='.cookie':
                 getIndex(pathname, data)
         else:
             print('Skipping %s, unknown file type' % pathname) 
@@ -27,43 +28,48 @@ def getIndex(dir, data):
 
 def saveIndex(dir, indexPath):
     dictionary=getIndex(dir,{})
-    index = json.dumps(dictionary, indent=4)
     with open(indexPath, "w") as outfile:
-        outfile.write(index)
+        outfile.write(json.dumps(dictionary, indent=4))
 
-def compareToIndex(dir, infoPath):
-    index=json.load(os.path.join(infoPath, 'index'))
-    staged=json.load(os.path.join(infoPath, 'staging'))
-    untracked={'A':None,
-               'C':None,
-               'D':None,
-               'M':None,
-               'R':None,
-               'T':None,
-               'U':None,
-               'X':None}
-    differences=populateDifferences(index,staged,untracked)
-    # differences to untracked file
+def compareToIndex(dir):
+    with open(os.path.join(dir, '.cookie', 'index'), 'r') as indexFile:
+        index=json.load(indexFile)
+    with open(os.path.join(dir, '.cookie', 'staged'), 'r') as stagingFile:
+        staged=json.load(stagingFile)
+    
+    differences={'A':{},
+               'D':{},
+               'M':{}
+               }
+    
+    differences=populateDifferences(dir, index, staged, differences)
+    with open(os.path.join(dir, '.cookie', 'unstaged'), 'w') as unstaged:
+        unstaged.write(json.dumps(differences, indent=4))
 
-def populateDifferences(index, staged, untracked):
+def populateDifferences(dir, index, staged, differences):
     for file in os.listdir(dir):
         pathname = os.path.join(dir, file)
         mode = os.lstat(pathname)
         if pathname not in index and pathname not in staged:
             if S_ISDIR(mode.st_mode):
-                untracked.update(getIndex(pathname,{}))
+                differences.update(getIndex(pathname,{}))
             elif S_ISREG(mode.st_mode):
-                untracked.update(statDictionary(mode))
+                differences['A'].update({pathname: statDictionary(mode)})
             else:
                 print('Skipping %s, unknown file type' % pathname)
-        #elif differences in files:
-        # function should be reccursive probably
-    #return (untrackedFiles, differences)
+    for item in index:
+        if not os.path.exists(item):
+            differences['D'].update({item: statDictionary(mode)})
+            continue
+        mode = os.lstat(item)
+        if index.get(item)!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
+            differences['M'].update({item: statDictionary(mode)})
+        
+    return differences
 
 
-# stage particular file because stage all is equivalent to saveIndex 
+# to implement stage all 
 def stageFile(pathname, infoPath):
-    #index=json.load(os.path.join(infoPath, 'index'))
     stagedPath=os.path.join(infoPath, 'staging')
     staged=json.load(stagedPath)
     staged.update(statDictionary(os.lstat(pathname)))

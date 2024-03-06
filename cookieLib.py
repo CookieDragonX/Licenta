@@ -1,7 +1,10 @@
 import argparse
 import sys
 import os
-argparser = argparse.ArgumentParser(description="The stupidest content tracker")
+
+from IndexManager import compareToIndex
+
+argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
 argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
 argsubparsers.required = True
@@ -25,7 +28,7 @@ def main(argv=sys.argv[1:]):
 def add():
     pass
 
-def init():
+def init(path=None):
     project_dir=os.environ["PROJECT_DIR"]
     os.mkdir(project_dir)
     os.mkdir(os.path.join(project_dir, "objects"))
@@ -41,7 +44,9 @@ def checkout():
     pass
 
 def status():
+
     pass
 
 def commit():
+    # deleted/modified are already added, new files need to be added tho
     pass

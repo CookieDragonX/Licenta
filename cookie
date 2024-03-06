@@ -1,0 +1,3 @@
+import cookieLib
+
+cookieLib.main()
