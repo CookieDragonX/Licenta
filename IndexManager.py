@@ -1,6 +1,9 @@
 import os,sys
 from stat import *
 import json
+from ObjectManager import store, getHash
+import Tree
+import Blob
 
 def statDictionary(mode):
     dictionary={}
@@ -67,12 +70,43 @@ def populateDifferences(dir, index, staged, differences):
         
     return differences
 
+def printDifferences(dir):
+    with open(os.path.join(dir, '.cookie', 'unstaged'), 'r') as unstagedFile:
+        unstaged=json.load(unstagedFile)
+    if unstaged['A']!={}:
+        print("Files added:")
+        print(*[file for file in unstaged['A']], sep=os.linesep)
+    if unstaged['D']!={}:
+        print("Files deleted:")
+        print(*[file for file in unstaged['D']], sep=os.linesep)
+    if unstaged['M']!={}:
+        print("Files modified:")
+        print(*[file for file in unstaged['M']], sep=os.linesep)
 
-# to implement stage all 
+
+# to implement stage all/ stage *change* 
 def stageFile(pathname, infoPath):
     stagedPath=os.path.join(infoPath, 'staging')
     staged=json.load(stagedPath)
     staged.update(statDictionary(os.lstat(pathname)))
     with open(stagedPath, "w") as outfile:
         outfile.write(json.dumps(staged, indent=4))
-    
+
+def storeStagedFiles(stagedFiles):
+    for file in stagedFiles:
+        with open(file, 'r') as fp:
+            fileContent=fp.read()
+        blobContent=':'.join(['B', file, fileContent])
+        store(Blob(blobContent.encode(encoding='utf-8')))
+
+def hashTree(dir, stagedFiles):
+    children=['T']
+    for pathname in os.listdir(dir):
+        if os.path.isdir(pathname):
+            treeHash=hashTree(dir)
+            children.extend([pathname,treeHash])
+        elif os.path.isfile(pathname):
+            children.extend([pathname,getHash(pathname)])
+    tree=Tree(':'.join(children))
+    store(tree)
+    return tree.id.hexdigest()

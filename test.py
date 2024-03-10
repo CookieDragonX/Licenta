@@ -1,14 +1,15 @@
 import sys
 from Blob import Blob
 import os
-from IndexManager import compareToIndex
-from IndexManager import saveIndex
-
+from IndexManager import compareToIndex, printDifferences, saveIndex
+from cookieLib import main
 
 if __name__=="__main__":
     os.environ["PROJECT_DIR"]="/home/cookie/Cookie_Repo/.cookie"
     os.environ["OBJECTS_PATH"]=os.path.join(os.environ["PROJECT_DIR"],"objects")
 
     #saveIndex('/home/cookie/TPAC-Project','/home/cookie/TPAC-Project/.cookie/index')
-    compareToIndex('/home/cookie/TPAC-Project')
+    #compareToIndex('/home/cookie/TPAC-Project')
+    #printDifferences('/home/cookie/TPAC-Project')
+    main("add","arb",'asdas')
     sys.exit(0)      

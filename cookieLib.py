@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 
-from IndexManager import compareToIndex
+from IndexManager import compareToIndex, printDifferences
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
@@ -12,41 +12,59 @@ argsubparsers.required = True
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
     if args.command == 'add':
-        add()
+        add(args)
     elif args.command == 'init':
-        init()
+        init(args)
     elif args.command == 'commit':
-        commit()
+        commit(args)
     elif args.command == 'checkout':
-        checkout()
+        checkout(args)
     elif args.command == 'status':
-        status()
+        status(args)
     else:
         print("Unknown command: "+args.command)
         sys.exit(1)
 
-def add():
-    pass
+def add(args):
+    if args[1]=='.':
+        #add all to staging
+        pass
+    else:   
+        for arg in args:
+            print(arg)
 
-def init(path=None):
+def init(args):
     project_dir=os.environ["PROJECT_DIR"]
-    os.mkdir(project_dir)
-    os.mkdir(os.path.join(project_dir, "objects"))
-    os.mkdir(os.path.join(project_dir, "branches"))
-    os.mkdir(os.path.join(project_dir, "logs"))
-    os.mkdir(os.path.join(project_dir, "refs"))
-    with open(os.path.join(project_dir, "index"), 'w') as fp:
-        pass
-    with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
-        pass
+    try:
+        os.mkdir(project_dir)
+        os.mkdir(os.path.join(project_dir, "objects"))
+        os.mkdir(os.path.join(project_dir, "branches"))
+        os.mkdir(os.path.join(project_dir, "logs"))
+        os.mkdir(os.path.join(project_dir, "refs"))
+        with open(os.path.join(project_dir, "index"), 'w') as fp:
+            fp.write('{}')
+            pass
+        with open(os.path.join(project_dir, "staged"), 'w') as fp:
+            fp.write('{}')
+            pass
+        with open(os.path.join(project_dir, "unstaged"), 'w') as fp:
+            fp.write('{}')
+            pass
+        with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
+            fp.write('{}')
+            pass
+    except OSError:
+        print("Already a cookie repository at "+project_dir)
+        sys.exit(1)
 
-def checkout():
+def checkout(args):
     pass
 
-def status():
+def status(args):
+    project_dir=os.environ["PROJECT_DIR"]
+    compareToIndex(project_dir)
+    printDifferences(project_dir)
 
-    pass
-
-def commit():
+def commit(args):
     # deleted/modified are already added, new files need to be added tho
     pass
