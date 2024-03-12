@@ -4,6 +4,7 @@ import json
 from ObjectManager import store, getHash
 import Tree
 import Blob
+from prettyPrintLib import printColor
 
 def statDictionary(mode):
     dictionary={}
@@ -37,23 +38,24 @@ def saveIndex(dir, indexPath):
 def compareToIndex(dir):
     with open(os.path.join(dir, '.cookie', 'index'), 'r') as indexFile:
         index=json.load(indexFile)
-    with open(os.path.join(dir, '.cookie', 'staged'), 'r') as stagingFile:
-        staged=json.load(stagingFile)
+    with open(os.path.join(dir, '.cookie', 'staging'), 'r') as stagingFile:
+        staging=json.load(stagingFile)
     
     differences={'A':{},
                'D':{},
                'M':{}
                }
     
-    differences=populateDifferences(dir, index, staged, differences)
+    differences=populateDifferences(dir, index, staging, differences)
     with open(os.path.join(dir, '.cookie', 'unstaged'), 'w') as unstaged:
         unstaged.write(json.dumps(differences, indent=4))
-
-def populateDifferences(dir, index, staged, differences):
+#some fixes in logic to be done here!!!
+        
+def populateDifferences(dir, index, staging, differences):
     for file in os.listdir(dir):
         pathname = os.path.join(dir, file)
         mode = os.lstat(pathname)
-        if pathname not in index and pathname not in staged:
+        if pathname not in index and pathname not in staging:
             if S_ISDIR(mode.st_mode):
                 differences.update(getIndex(pathname,{}))
             elif S_ISREG(mode.st_mode):
@@ -74,23 +76,24 @@ def printDifferences(dir):
     with open(os.path.join(dir, '.cookie', 'unstaged'), 'r') as unstagedFile:
         unstaged=json.load(unstagedFile)
     if unstaged['A']!={}:
-        print("Files added:")
+        printColor("-->Files added:",'green')
         print(*[file for file in unstaged['A']], sep=os.linesep)
     if unstaged['D']!={}:
-        print("Files deleted:")
+        printColor("-->Files deleted:",'red')
         print(*[file for file in unstaged['D']], sep=os.linesep)
     if unstaged['M']!={}:
-        print("Files modified:")
+        printColor("-->Files modified:",'blue')
         print(*[file for file in unstaged['M']], sep=os.linesep)
+    
 
-
-# to implement stage all/ stage *change* 
-def stageFile(pathname, infoPath):
-    stagedPath=os.path.join(infoPath, 'staging')
-    staged=json.load(stagedPath)
-    staged.update(statDictionary(os.lstat(pathname)))
-    with open(stagedPath, "w") as outfile:
-        outfile.write(json.dumps(staged, indent=4))
+def stageFiles(paths, repoPath):
+    stagingPath=os.path.join(repoPath, '.cookie', 'staging')
+    with open(stagingPath, 'r') as stagingFile:
+        staging=json.load(stagingFile)
+    for pathname in paths:
+        staging[pathname]=statDictionary(os.lstat(pathname))
+    with open(stagingPath, "w") as outfile:
+        outfile.write(json.dumps(staging, indent=4))
 
 def storeStagedFiles(stagedFiles):
     for file in stagedFiles:

@@ -9,7 +9,4 @@ if __name__=="__main__":
     os.environ["OBJECTS_PATH"]=os.path.join(os.environ["PROJECT_DIR"],"objects")
 
     #saveIndex('/home/cookie/TPAC-Project','/home/cookie/TPAC-Project/.cookie/index')
-    #compareToIndex('/home/cookie/TPAC-Project')
-    #printDifferences('/home/cookie/TPAC-Project')
-    main("add","arb",'asdas')
     sys.exit(0)      
