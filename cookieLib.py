@@ -2,7 +2,7 @@ import argparse
 import sys
 import os
 
-from IndexManager import compareToIndex, printDifferences, stageFiles
+from IndexManager import compareToIndex, printStaged, printUnstaged, stageFiles, resolveStagingMatches
 
 from prettyPrintLib import printColor
 
@@ -63,13 +63,12 @@ def init(args):
             fp.write('{}')
             pass
         with open(os.path.join(project_dir, "staging"), 'w') as fp:
-            fp.write('{}')
+            fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
             pass
         with open(os.path.join(project_dir, "unstaged"), 'w') as fp:
-            fp.write('{}')
+            fp.write('{"A":{},"D":{},"M":{}}')
             pass
         with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
-            fp.write('{}')
             pass
     except OSError:
         printColor("Already a cookie repository at {}".format(project_dir),'red')
@@ -77,17 +76,21 @@ def init(args):
     printColor("Successfully initialized a cookie repository at {}".format(project_dir),'green')
 
 def add(args):
-    stageFiles(args.paths,resolveCookieRepository())
+    stageFiles(args.paths, resolveCookieRepository())
 
 
 def checkout(args):
     pass
 
-def status(args):
+def status(args, quiet=False):
     project_dir=resolveCookieRepository()
     compareToIndex(project_dir)
-    printDifferences(project_dir)
+    resolveStagingMatches(project_dir)
+    if not quiet:
+        printStaged(project_dir)
+        printUnstaged(project_dir)
 
 def commit(args):
+    status(quiet=True)
     # deleted/modified are already added, new files need to be added tho
     pass

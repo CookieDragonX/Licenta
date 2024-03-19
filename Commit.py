@@ -27,4 +27,7 @@ class Commit(Object):
         self.author=metaDataSplit[iter]
         self.message=metaDataSplit[iter+1]
         self.time=metaDataSplit[iter+2]
-        self.snapshow=metaDataSplit[iter+3]
+        self.snapshot=metaDataSplit[iter+3]
+
+    def getMetaData(self):
+        return 'C:{}:A:{}:{}:{}:{}'.format(':'.join(self.parents),self.author, self.message, self.time, self.snapshot)

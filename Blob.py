@@ -11,4 +11,6 @@ class Blob(Object):
         metaDataSplit=metaDataDecoded.split(':')[1:]
         filename=metaDataSplit[1]
         self.content=metaDataSplit[2:].join(':')
+    def getMetaData(self):
+        return 'B:{}:{}'.format(self.filename,self.content)
 

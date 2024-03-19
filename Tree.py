@@ -12,3 +12,5 @@ class Tree(Object):
         self.map={}
         for name, hash in zip(*[iter(metaDataSplit)]*2):
             self.map[name]=hash
+    def getMetaData(self):
+        return 'T:{}'.format(':'.join(['{}:{}'.format(key,value) for key, value in self.map.iteritems()]))
