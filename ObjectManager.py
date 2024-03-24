@@ -32,11 +32,17 @@ def store(object, objectsPath):
     with open(os.path.join(objectsPath, id[:2], id[2:]),'wb') as object:
         object.write(object.getMetaData)
 
-def getHash(path):
+def getHash(path): #only Blob but not really an useful method
     with open(path, 'r') as fp:
         fileContent=fp.read()
     blobContent=':'.join(['B', path, fileContent])
     return sha1(blobContent.encode(encoding='utf-8'))
+
+def createBlob(path):
+    with open(path, 'r') as fp:
+        fileContent=fp.read()
+    blobContent=':'.join(['B', path, fileContent])
+    return Blob(blobContent)
 
 def getObjectType(hash, objectsPath):
     with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
@@ -48,6 +54,18 @@ def getMetaData(hash,objectsPath):
     with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r') as object:
         return object.read().decode(encoding='utf-8')
     
+def hashTree(dir, objectsPath):
+    metaData=['T']
+    for pathname in os.listdir(dir):
+        if os.path.isdir(pathname):
+            treeHash=hashTree(dir)
+            metaData.extend([pathname, treeHash])
+        elif os.path.isfile(pathname):
+            metaData.extend([pathname, getHash(pathname)])
+    tree=Tree(':'.join(metaData))
+    store(tree, objectsPath)
+    return tree.getHash()
+
 def mergeBlobs(target, source, objectsPath): #the args are hashes
     newBlobData=["B"]
     # this is way easier, difflib the 2 contents, parse result create new blob, ask to solve conflict if there is conflict
@@ -83,14 +101,4 @@ def mergeCommits(target, source, objectsPath):
     #new commit has snapshot mergeTrees(target.getSnapshot(), source.getSnapshot())
     store(Commit(':'.join(mergeCommitData)), objectsPath)
 
-def hashTree(dir, objectsPath):
-    metaData=['T']
-    for pathname in os.listdir(dir):
-        if os.path.isdir(pathname):
-            treeHash=hashTree(dir)
-            metaData.extend([pathname,treeHash])
-        elif os.path.isfile(pathname):
-            metaData.extend([pathname,getHash(pathname)])
-    tree=Tree(':'.join(metaData))
-    store(tree, objectsPath)
-    return tree.getHash()
+
