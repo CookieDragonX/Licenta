@@ -2,8 +2,8 @@ import os,sys
 from stat import *
 import json
 from ObjectManager import store, createBlob
-import Tree
-import Blob
+from Tree import Tree
+from Blob import Blob
 from prettyPrintLib import printColor
 
 def statDictionary(mode):
@@ -18,21 +18,24 @@ def statDictionary(mode):
     return dictionary
 
 
-def getIndex(dir, data):
+def getIndex(dir, data, targetDirs, ignoreTarget):
     for file in os.listdir(dir):
         pathname = os.path.join(dir, file)
+        if pathname not in targetDirs:
+            if not ignoreTarget:
+                continue
         mode = os.lstat(pathname)
         if S_ISDIR(mode.st_mode) or S_ISREG(mode.st_mode):
             data[pathname]=statDictionary(mode)
             if S_ISDIR(mode.st_mode) and file!='.cookie':
-                getIndex(pathname, data)
+                getIndex(pathname, data, targetDirs, ignoreTarget)
         else:
             print('Skipping %s, unknown file type' % pathname) 
     return data
 
-def saveIndex(dir, repoPath): #dangerous method frn
-    indexPath=os.path.join(repoPath, '.cookie', 'index')
-    dictionary=getIndex(dir,{})
+def saveIndex(dir, targetDirs):
+    indexPath=os.path.join(dir, '.cookie', 'index')
+    dictionary=getIndex(dir, {}, targetDirs, False)
     with open(indexPath, "w") as outfile:
         outfile.write(json.dumps(dictionary, indent=4))
 
@@ -51,8 +54,12 @@ def TreeHash(dir, index, objectsPath, repoPath, targetDirs):
     for pathname in os.listdir(dir):
         if pathname == '.cookie' or pathname == '.git':
             continue
-        if pathname not in targetDirs:  #if not in targetDirs it should be in index!!! if not check this stuff
-            metaData.append(index[pathname]['hash'])
+        if pathname not in targetDirs: 
+            if pathname in index:
+                metaData.append(index[pathname]['hash']) #case where there's an unmodified file in the repo
+            else:
+                #case where file is not tracked 
+                pass
         elif os.is_dir(pathname):
             metaData.append(TreeHash(pathname, index, objectsPath, repoPath, targetDirs))
         else:
@@ -60,7 +67,7 @@ def TreeHash(dir, index, objectsPath, repoPath, targetDirs):
                 metaData.append(index['hash'])
             else:
                 metaData.append(addFileToIndex(pathname, repoPath))
-    tree=Tree(metaData)
+    tree=Tree(':'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
 
@@ -92,7 +99,11 @@ def resolveStagingMatches(dir, thorough=False):
     #method should match some stuff to find renames/movement/copying/renamed
     pass
 
-
+def resetStagingArea(repoPath):
+    with open(os.path.join(repoPath, ".cookie", "staged"), 'w') as fp:
+        fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
+        
+        
 #some fixes in logic to be done here, EDIT 12.3 some changes made needs testing. Big method :(
         
 def populateDifferences(dir, index, staged, differences):
@@ -101,7 +112,7 @@ def populateDifferences(dir, index, staged, differences):
         mode = os.lstat(pathname)
         if pathname not in index and pathname not in staged['A'] and pathname not in staged['D'] and pathname not in staged['M'] and pathname not in staged['C'] and pathname not in staged['R'] and pathname not in staged['T'] and pathname not in staged['X']:
             if S_ISDIR(mode.st_mode):
-                differences.update(getIndex(pathname,{}))
+                differences.update(getIndex(pathname, {} , targetDirs=[], ignoreTarget=True))
             elif S_ISREG(mode.st_mode):
                 differences['A'].update({pathname: statDictionary(mode)})
             else:
@@ -150,7 +161,7 @@ def printUnstaged(dir):
     if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
         printColor("    Unstaged changes:","white")
         if unstaged['A']!={}:
-            printColor("-->Files added:",'red')
+            printColor("-->Files untracked:",'red')
             print(*["   {}".format(file) for file in unstaged['A']], sep=os.linesep)
         if unstaged['D']!={}:
             printColor("-->Files deleted:",'red')

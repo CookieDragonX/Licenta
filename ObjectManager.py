@@ -29,8 +29,8 @@ def store(object, objectsPath):
     id=object.getHash()
     if not os.path.isdir(os.path.join(objectsPath, id[:2])):
         os.mkdir(os.path.join(objectsPath, id[:2]))
-    with open(os.path.join(objectsPath, id[:2], id[2:]),'wb') as object:
-        object.write(object.getMetaData)
+    with open(os.path.join(objectsPath, id[:2], id[2:]),'wb') as fp:
+        fp.write(object.getMetaData())
 
 def getHash(path): #only Blob but not really an useful method
     with open(path, 'r') as fp:

@@ -86,7 +86,7 @@ def init(args):
         with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
             pass
         with open(os.path.join(project_dir, "userdata"), 'w') as fp:
-            fp.write('{"name":"","email":""}')
+            fp.write('{"user":"","email":""}')
     except OSError:
         printColor("Already a cookie repository at {}".format(project_dir),'red')
         sys.exit(1)
@@ -105,7 +105,9 @@ def status(args, quiet=False, project_dir=None):
     compareToIndex(project_dir)
     resolveStagingMatches(project_dir)
     if not quiet:
+        print("")
         printStaged(project_dir)
+        print("")
         printUnstaged(project_dir)
 
 def commit(args):
@@ -119,20 +121,31 @@ def commit(args):
     if os.stat(os.path.join(project_dir, '.cookie', 'HEAD')).st_size == 0:
         metaData.append('None')
     else:
-        with open(os.stat(os.path.join(project_dir, '.cookie', 'HEAD')), 'r') as headFile:
+        with open(os.path.join(project_dir, '.cookie', 'HEAD'), 'r') as headFile:
             metaData.append(headFile.read())
+    metaData.append('A')
     with open(os.path.join(project_dir, '.cookie', 'userdata'), 'r') as fp:
         userdata=json.load(fp)
-    metaData.append(userdata['user'])
-    metaData.append(time())
+        
+    if userdata['user'] == "":
+        printColor("Please login with a valid e-mail first!",'red')
+        printColor("Use 'cookie login'",'white')
+        sys.exit(0)
+    else:
+        metaData.append(userdata['user'])
+    
+    metaData.append(args.message)
+    metaData.append(str(time()))
     with open(os.path.join(project_dir, '.cookie', 'index'), 'r') as indexFile:
         index=json.load(indexFile)
-    print(getTargetDirs(project_dir))
-    metaData.append(TreeHash(project_dir, index, os.path.join(project_dir, '.cookie', 'objects'), project_dir, getTargetDirs(project_dir)))
-    newCommit=Commit(metaData)
+    targetDirs=getTargetDirs(project_dir)
+    metaData.append(TreeHash(project_dir, index, os.path.join(project_dir, '.cookie', 'objects'), project_dir, targetDirs))
+    newCommit=Commit(':'.join(metaData))
     store(newCommit, os.path.join(project_dir, '.cookie', 'objects'))
-    with open(os.stat(os.path.join(project_dir, '.cookie', 'HEAD')), 'w') as headFile:
+    with open(os.path.join(project_dir, '.cookie', 'HEAD'), 'w') as headFile:
         headFile.write(newCommit.getHash())
+    resetStagingArea(project_dir)
+    saveIndex(project_dir, targetDirs)
 
 def login(args):
     printColor("Please enter a valid username (empty to keep old one): ", 'white')
