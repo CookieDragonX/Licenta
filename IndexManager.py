@@ -21,26 +21,26 @@ def statDictionary(mode):
 def getIndex(dir, data, targetDirs, ignoreTarget):
     for file in os.listdir(dir):
         pathname = os.path.join(dir, file)
-        if pathname not in targetDirs:
+        if file not in targetDirs:
             if not ignoreTarget:
                 continue
         mode = os.lstat(pathname)
         if S_ISDIR(mode.st_mode) or S_ISREG(mode.st_mode):
-            data[pathname]=statDictionary(mode)
+            data[file]=statDictionary(mode)
             if S_ISDIR(mode.st_mode) and file!='.cookie':
-                getIndex(pathname, data, targetDirs, ignoreTarget)
+                getIndex(os.path.join(file), data, targetDirs, ignoreTarget)
         else:
-            print('Skipping %s, unknown file type' % pathname) 
+            print('Skipping %s, unknown file type' % file) 
     return data
 
-def saveIndex(dir, targetDirs):
-    indexPath=os.path.join(dir, '.cookie', 'index')
-    dictionary=getIndex(dir, {}, targetDirs, False)
+def saveIndex(targetDirs):
+    indexPath=os.path.join('.cookie', 'index')
+    dictionary=getIndex(".", {}, targetDirs, False)
     with open(indexPath, "w") as outfile:
         outfile.write(json.dumps(dictionary, indent=4))
 
-def getTargetDirs(repoPath):
-    stagedFiles=getStagedFiles(repoPath)
+def getTargetDirs():
+    stagedFiles=getStagedFiles()
     dirs=[]
     for path in stagedFiles:
         separated_dirs=path.split(os.sep)
@@ -49,7 +49,7 @@ def getTargetDirs(repoPath):
                 dirs.append(os.path.join(*separated_dirs[0:length]))
     return dirs
 
-def TreeHash(dir, index, objectsPath, repoPath, targetDirs):
+def TreeHash(dir, index, objectsPath, targetDirs):
     metaData=['T']
     for pathname in os.listdir(dir):
         if pathname == '.cookie' or pathname == '.git':
@@ -60,47 +60,52 @@ def TreeHash(dir, index, objectsPath, repoPath, targetDirs):
             else:
                 #case where file is not tracked 
                 pass
-        elif os.is_dir(pathname):
-            metaData.append(TreeHash(pathname, index, objectsPath, repoPath, targetDirs))
+        elif os.path.isdir(pathname):
+            metaData.append(TreeHash(os.path.join(dir, pathname), index, objectsPath, targetDirs))
         else:
             if pathname in index:
                 metaData.append(index['hash'])
             else:
-                metaData.append(addFileToIndex(pathname, repoPath))
+                metaData.append(addFileToIndex(pathname))
     tree=Tree(':'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
 
-def addFileToIndex(pathname, repoPath):
-    indexPath=os.path.join(repoPath, '.cookie', 'index')
+def generateSnapshot(targetDirs):
+    with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
+        index=json.load(indexFile)
+    return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs)
+
+def addFileToIndex(pathname):
+    indexPath=os.path.join('.cookie', 'index')
     with open(indexPath, 'r') as indexFile:
         index=json.load(indexFile)
     mode = os.lstat(pathname)
     blob = createBlob(pathname)
-    store(blob, os.path.join(repoPath, '.cookie', 'objects'))
+    store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
     return blob.getHash()
 
-def compareToIndex(dir):
-    with open(os.path.join(dir, '.cookie', 'index'), 'r') as indexFile:
+def compareToIndex():
+    with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
         index=json.load(indexFile)
-    with open(os.path.join(dir, '.cookie', 'staged'), 'r') as stagingFile:
+    with open(os.path.join('.cookie', 'staged'), 'r') as stagingFile:
         staged=json.load(stagingFile)
     differences={'A':{},
                'D':{},
                'M':{}
                }
-    differences=populateDifferences(dir, index, staged, differences)
-    with open(os.path.join(dir, '.cookie', 'unstaged'), 'w') as unstaged:
+    differences=populateDifferences(".", index, staged, differences)
+    with open(os.path.join('.cookie', 'unstaged'), 'w') as unstaged:
         unstaged.write(json.dumps(differences, indent=4))
 
-def resolveStagingMatches(dir, thorough=False):
+def resolveStagingMatches(thorough=False):
     #method should match some stuff to find renames/movement/copying/renamed
     pass
 
-def resetStagingArea(repoPath):
-    with open(os.path.join(repoPath, ".cookie", "staged"), 'w') as fp:
+def resetStagingArea():
+    with open(os.path.join(".cookie", "staged"), 'w') as fp:
         fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
         
         
@@ -108,17 +113,19 @@ def resetStagingArea(repoPath):
         
 def populateDifferences(dir, index, staged, differences):
     for file in os.listdir(dir):
+        if file=='.cookie' or file=='.git' :
+            continue
         pathname = os.path.join(dir, file)
         mode = os.lstat(pathname)
-        if pathname not in index and pathname not in staged['A'] and pathname not in staged['D'] and pathname not in staged['M'] and pathname not in staged['C'] and pathname not in staged['R'] and pathname not in staged['T'] and pathname not in staged['X']:
+        if file not in index and file not in staged['A'] and file not in staged['D'] and file not in staged['M'] and file not in staged['C'] and file not in staged['R'] and file not in staged['T'] and file not in staged['X']:
             if S_ISDIR(mode.st_mode):
-                differences.update(getIndex(pathname, {} , targetDirs=[], ignoreTarget=True))
+                differences.update(getIndex(file, {} , targetDirs=[], ignoreTarget=True))
             elif S_ISREG(mode.st_mode):
-                differences['A'].update({pathname: statDictionary(mode)})
+                differences['A'].update({file: statDictionary(mode)})
             else:
-                print('Skipping %s, unknown file type' % pathname)
+                print('Skipping %s, unknown file type' % file)
         elif S_ISDIR(mode.st_mode):
-            differences=populateDifferences(pathname, index, staged, differences)
+            differences.update(populateDifferences(pathname, index, staged, differences))
     for item in index:
         if not os.path.exists(item):
             differences['D'].update({item: statDictionary(mode)})
@@ -128,8 +135,8 @@ def populateDifferences(dir, index, staged, differences):
             differences['M'].update({item: statDictionary(mode)})        
     return differences
 
-def printStaged(dir):
-    with open(os.path.join(dir, '.cookie', 'staged'), 'r') as stagedFile:
+def printStaged():
+    with open(os.path.join('.cookie', 'staged'), 'r') as stagedFile:
         staged=json.load(stagedFile)
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         printColor("    Changes to be committed:","white")
@@ -155,8 +162,8 @@ def printStaged(dir):
             printColor("-->Files with unknown modifications:",'green')
             print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
     
-def printUnstaged(dir):
-    with open(os.path.join(dir, '.cookie', 'unstaged'), 'r') as unstagedFile:
+def printUnstaged():
+    with open(os.path.join('.cookie', 'unstaged'), 'r') as unstagedFile:
         unstaged=json.load(unstagedFile)
     if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
         printColor("    Unstaged changes:","white")
@@ -172,11 +179,11 @@ def printUnstaged(dir):
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
     
 
-def stageFiles(paths, repoPath):
-    stagedPath=os.path.join(repoPath, '.cookie', 'staged')
+def stageFiles(paths):
+    stagedPath=os.path.join('.cookie', 'staged')
     with open(stagedPath, 'r') as stagingFile:
         staged=json.load(stagingFile)
-    unstagedPath=os.path.join(repoPath, '.cookie', 'unstaged')
+    unstagedPath=os.path.join('.cookie', 'unstaged')
     with open(unstagedPath, 'r') as unstagedFile:
         unstaged=json.load(unstagedFile)
     for pathname in paths:
@@ -194,8 +201,8 @@ def stageFiles(paths, repoPath):
     with open(unstagedPath, "w") as outfile:
         outfile.write(json.dumps(unstaged, indent=4))
 
-def getStagedFiles(repoPath):
-    stagedPath=os.path.join(repoPath, '.cookie', 'staged')
+def getStagedFiles():
+    stagedPath=os.path.join('.cookie', 'staged')
     with open(stagedPath, 'r') as stagingFile:
         staged=json.load(stagingFile)
     stagedFiles=dict()
@@ -208,16 +215,16 @@ def getStagedFiles(repoPath):
     stagedFiles.update(staged['X'])
     return list(stagedFiles.keys())
 
-def storeStagedFiles(repoPath):
-    stagedFiles=getStagedFiles(repoPath)
+def storeStagedFiles():
+    stagedFiles=getStagedFiles()
     for file in stagedFiles:
         with open(file, 'r') as fp:
             fileContent=fp.read()
         blobContent=':'.join(['B', file, fileContent])
-        store(Blob(blobContent.encode(encoding='utf-8')), os.path.join(repoPath, '.cookie', 'objects'))
+        store(Blob(blobContent.encode(encoding='utf-8')), os.path.join('.cookie', 'objects'))
 
-def isThereStagedStuff(repoPath):
-    stagedPath=os.path.join(repoPath, '.cookie', 'staged')
+def isThereStagedStuff():
+    stagedPath=os.path.join('.cookie', 'staged')
     with open(stagedPath, 'r') as stagingFile:
         staged=json.load(stagingFile)
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:

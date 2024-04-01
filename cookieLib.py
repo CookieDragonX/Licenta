@@ -5,7 +5,7 @@ import json
 from time import time
 from IndexManager import *
 from ObjectManager import Commit
-
+import shutil
 from prettyPrintLib import printColor
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
@@ -41,6 +41,14 @@ argsp.add_argument("-m",
 #login subcommand definition
 argsp = argsubparsers.add_parser("login", help="Set username and email for local user.")
 
+#Delete subcommand definition
+argsp = argsubparsers.add_parser("delete", help="Delete repository at a certain location. ->DEBUG ONLY<-")
+argsp.add_argument("path",
+                   metavar="directory",
+                   nargs="?",
+                   default=os.getcwd(),
+                   help="Path to repo that needs deletion")
+
 
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
@@ -56,18 +64,28 @@ def main(argv=sys.argv[1:]):
         status(args)
     elif args.command == 'login':
         login(args)
+    elif args.command == 'delete':
+        delete(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
 
-def resolveCookieRepository():
-    prevwd=os.getcwd()
-    while '.cookie' not in os.listdir():
-        os.chdir('..')
-        if prevwd==os.getcwd():
-            printColor('Could not resolve cookie repository at this location','red')
-            sys.exit(1)
-    return os.getcwd()
+def cookieCertified(fct):       #decorator for functions that work with objects to that everything happens at correct repo location
+    def inner(*argv, **kwargs):
+        prevwd=""
+        initial=os.getcwd()
+        while '.cookie' not in os.listdir():
+            prevwd=os.getcwd()
+            os.chdir('..')
+            if prevwd==os.getcwd():
+                printColor('Could not resolve cookie repository at this location!','red')
+                printColor('Make sure you are in the correct location...','white')
+                sys.exit(1)
+        rez=fct(*argv, **kwargs)
+        os.chdir(initial)
+        return rez
+    return inner
+
 
 def init(args):
     project_dir=os.path.join(args.path, '.cookie')
@@ -92,39 +110,44 @@ def init(args):
         sys.exit(1)
     printColor("Successfully initialized a cookie repository at {}".format(project_dir),'green')
 
+@cookieCertified
+def delete(args):
+    shutil.rmtree('.cookie')
+    printColor("    --> .cookie directory deleted. Objects kept", 'red')
+
+@cookieCertified
 def add(args):
-    stageFiles(args.paths, resolveCookieRepository())
+    stageFiles(args.paths)
 
-
+@cookieCertified
 def checkout(args):
     pass
 
-def status(args, quiet=False, project_dir=None):
-    if project_dir==None:
-        project_dir=resolveCookieRepository()
-    compareToIndex(project_dir)
-    resolveStagingMatches(project_dir)
+@cookieCertified
+def status(args, quiet=False):
+    compareToIndex()
+    resolveStagingMatches()
     if not quiet:
         print("")
-        printStaged(project_dir)
+        printStaged()
         print("")
-        printUnstaged(project_dir)
+        printUnstaged()
 
+@cookieCertified
 def commit(args):
-    project_dir=resolveCookieRepository()
-    status(args,quiet=True, project_dir=project_dir)
-    if not isThereStagedStuff(project_dir):
+    status(args,quiet=True)
+    if not isThereStagedStuff():
         printColor("There is noting to commit...", "blue")
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
         sys.exit(1) 
     metaData=['C']
-    if os.stat(os.path.join(project_dir, '.cookie', 'HEAD')).st_size == 0:
+    if os.stat(os.path.join('.cookie', 'HEAD')).st_size == 0:
         metaData.append('None')
     else:
-        with open(os.path.join(project_dir, '.cookie', 'HEAD'), 'r') as headFile:
+        with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
             metaData.append(headFile.read())
     metaData.append('A')
-    with open(os.path.join(project_dir, '.cookie', 'userdata'), 'r') as fp:
+    with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
         userdata=json.load(fp)
         
     if userdata['user'] == "":
@@ -136,29 +159,31 @@ def commit(args):
     
     metaData.append(args.message)
     metaData.append(str(time()))
-    with open(os.path.join(project_dir, '.cookie', 'index'), 'r') as indexFile:
-        index=json.load(indexFile)
-    targetDirs=getTargetDirs(project_dir)
-    metaData.append(TreeHash(project_dir, index, os.path.join(project_dir, '.cookie', 'objects'), project_dir, targetDirs))
+    
+    targetDirs=getTargetDirs()
+    
+    metaData.append(generateSnapshot(targetDirs))
     newCommit=Commit(':'.join(metaData))
-    store(newCommit, os.path.join(project_dir, '.cookie', 'objects'))
-    with open(os.path.join(project_dir, '.cookie', 'HEAD'), 'w') as headFile:
+    store(newCommit, os.path.join('.cookie', 'objects'))
+    with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
         headFile.write(newCommit.getHash())
-    resetStagingArea(project_dir)
-    saveIndex(project_dir, targetDirs)
+    resetStagingArea()
+    saveIndex(targetDirs)
+    printColor("Successfully commited changes.","green")
+    printColor("Current commit hash: "+newCommit.getHash(), 'green')
 
+@cookieCertified
 def login(args):
     printColor("Please enter a valid username (empty to keep old one): ", 'white')
     user=input()
     printColor("Please enter a valid email: (empty to keep old one)", 'white')
     email=input()
-    project_dir=resolveCookieRepository()
-    with open(os.path.join(project_dir, '.cookie', 'userdata'), 'r') as fp:
+    with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
         data=json.load(fp)
     if user != '':
         data["user"] = user
     if email != '':
         data["email"] = email
     print(data)
-    with open(os.path.join(project_dir, '.cookie', 'userdata'), 'w') as fp:
+    with open(os.path.join('.cookie', 'userdata'), 'w') as fp:
         json.dump(data, fp)
