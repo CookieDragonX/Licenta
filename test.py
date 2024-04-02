@@ -3,7 +3,7 @@ from Blob import Blob
 import os
 from cookieLib import main
 import json
-from IndexManager import resetStagingArea
+from IndexManager import *
 from cookieLib import *
 from cookieLib import cookieCertified
 
@@ -13,5 +13,5 @@ def nothing(x):
     print(os.getcwd())
 
 if __name__=="__main__":
-    nothing(123)
+    print(getTargetDirs())
     sys.exit(0)      

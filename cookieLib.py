@@ -8,6 +8,10 @@ from ObjectManager import Commit
 import shutil
 from prettyPrintLib import printColor
 
+
+DEBUG=True  #make testing easier :D
+
+
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
 argsubparsers = argparser.add_subparsers(title="Commands", dest="command")
@@ -117,6 +121,7 @@ def delete(args):
 
 @cookieCertified
 def add(args):
+    status(args,quiet=True)
     stageFiles(args.paths)
 
 @cookieCertified
@@ -147,15 +152,18 @@ def commit(args):
         with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
             metaData.append(headFile.read())
     metaData.append('A')
-    with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
-        userdata=json.load(fp)
-        
-    if userdata['user'] == "":
-        printColor("Please login with a valid e-mail first!",'red')
-        printColor("Use 'cookie login'",'white')
-        sys.exit(0)
+    if DEBUG:
+        metaData.append("Totally_Valid_Username")
     else:
-        metaData.append(userdata['user'])
+        with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
+            userdata=json.load(fp)
+            
+        if userdata['user'] == "":
+            printColor("Please login with a valid e-mail first!",'red')
+            printColor("Use 'cookie login'",'white')
+            sys.exit(0)
+        else:
+            metaData.append(userdata['user'])
     
     metaData.append(args.message)
     metaData.append(str(time()))
@@ -168,7 +176,7 @@ def commit(args):
     with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
         headFile.write(newCommit.getHash())
     resetStagingArea()
-    saveIndex(targetDirs)
+    #saveIndex(targetDirs)
     printColor("Successfully commited changes.","green")
     printColor("Current commit hash: "+newCommit.getHash(), 'green')
 

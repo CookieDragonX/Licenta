@@ -36,8 +36,8 @@ def getIndex(dir, data, targetDirs, ignoreTarget):
 def saveIndex(targetDirs):
     indexPath=os.path.join('.cookie', 'index')
     dictionary=getIndex(".", {}, targetDirs, False)
-    with open(indexPath, "w") as outfile:
-        outfile.write(json.dumps(dictionary, indent=4))
+    with open(indexPath, "w") as index:
+        index.write(json.dumps(dictionary, indent=4))
 
 def getTargetDirs():
     stagedFiles=getStagedFiles()
@@ -56,16 +56,20 @@ def TreeHash(dir, index, objectsPath, targetDirs):
             continue
         if pathname not in targetDirs: 
             if pathname in index:
+                metaData.append(os.path.join(dir, pathname))
                 metaData.append(index[pathname]['hash']) #case where there's an unmodified file in the repo
             else:
                 #case where file is not tracked 
                 pass
         elif os.path.isdir(pathname):
+            metaData.append(os.path.join(dir, pathname))
             metaData.append(TreeHash(os.path.join(dir, pathname), index, objectsPath, targetDirs))
         else:
             if pathname in index:
+                metaData.append(os.path.join(dir, pathname))
                 metaData.append(index['hash'])
             else:
+                metaData.append(os.path.join(dir, pathname))
                 metaData.append(addFileToIndex(pathname))
     tree=Tree(':'.join(metaData))
     store(tree, objectsPath)
@@ -85,6 +89,8 @@ def addFileToIndex(pathname):
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
+    with open(indexPath, 'w') as indexFile:
+        indexFile.write(json.dumps(index, indent=4))
     return blob.getHash()
 
 def compareToIndex():
