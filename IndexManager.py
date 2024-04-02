@@ -114,7 +114,6 @@ def resetStagingArea():
     with open(os.path.join(".cookie", "staged"), 'w') as fp:
         fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
         
-        
 #some fixes in logic to be done here, EDIT 12.3 some changes made needs testing. Big method :(
         
 def populateDifferences(dir, index, staged, differences):

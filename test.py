@@ -5,13 +5,11 @@ from cookieLib import main
 import json
 from IndexManager import *
 from cookieLib import *
-from cookieLib import cookieCertified
+from ObjectManager import *
 
-@cookieCertified
-def nothing(x):
-    print(x)
-    print(os.getcwd())
-
+def test_basic_functionality_of_index():
+    #define test init -> status -> add -> commit
+    pass
 if __name__=="__main__":
-    print(getTargetDirs())
+    
     sys.exit(0)      
