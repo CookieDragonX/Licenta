@@ -2,7 +2,7 @@ from Object import Object
 from hashlib import sha1
 
 # Tree --> map{string, Tree|Blob}
-# T:str:obj:str:obj:str:obj...
+# T:path:hash:path:hash:path:hash...
 
 class Tree(Object):
     def __init__(self, metaData) -> None:
@@ -12,7 +12,7 @@ class Tree(Object):
             metaDataDecoded=metaData
         metaDataSplit=metaDataDecoded.split(':')[1:]
         self.map={}
-        for name, hash in zip(*[iter(metaDataSplit)]*2):
-            self.map[name]=hash
+        for path, hash in zip(*[iter(metaDataSplit)]*2):
+            self.map[path]=hash
     def getMetaData(self):
         return ('T:{}'.format(':'.join(['{}:{}'.format(key,value) for key, value in self.map.items()]))).encode('utf-8')
