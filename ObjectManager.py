@@ -8,9 +8,7 @@ from Commit import Commit
 
 
 def load(hash, objectsPath):
-    if not os.path.isdir(os.path.join(objectsPath,hash[:2])):
-        raise NoSuchObjectException
-    elif not os.path.isfile(os.path.join(objectsPath,hash[2:])):
+    if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException
     else:
         with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
@@ -45,6 +43,8 @@ def createBlob(path):
     return Blob(blobContent)
 
 def getObjectType(hash, objectsPath):
+    if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
+        raise NoSuchObjectException
     with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
         metaData=object.read()
     metaData=metaData.decode(encoding='utf-8')

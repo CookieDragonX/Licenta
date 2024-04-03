@@ -4,9 +4,14 @@ import os
 import json
 from time import time
 from IndexManager import *
-from ObjectManager import Commit
+from SnapshotManager import *
+from ObjectManager import Commit, getObjectType
 import shutil
 from prettyPrintLib import printColor
+from errors import NoSuchObjectException
+
+DEBUG=True  #make testing easier :D
+
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
@@ -49,6 +54,27 @@ argsp.add_argument("path",
                    default=os.getcwd(),
                    help="Path to repo that needs deletion")
 
+#Checkout subcommand definition
+argsp = argsubparsers.add_parser("checkout", help="Checkout a previous snapshot.")
+argsp.add_argument("ref",
+                   metavar="directory",
+                   nargs="?",
+                   default=None,
+                   help="Hash or branch to checkout.")
+
+#Branch creation subcommand definition
+argsp = argsubparsers.add_parser("create_branch", help="Create a new branch.")
+argsp.add_argument("-b",
+                   "--branch",
+                   metavar="branch",
+                   nargs="?",
+                   default=None,
+                   help="Branch name to create.")
+argsp.add_argument("ref",
+                   metavar="directory",
+                   nargs="?",
+                   default=None,
+                   help="Hash or branch to base new branch upon. If left empty will create based on current branch")
 
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
@@ -60,6 +86,8 @@ def main(argv=sys.argv[1:]):
         commit(args)
     elif args.command == 'checkout':
         checkout(args)
+    elif args.command == 'new_branch':
+        new_branch(args)
     elif args.command == 'status':
         status(args)
     elif args.command == 'login':
@@ -90,11 +118,9 @@ def cookieCertified(fct):       #decorator for functions that work with objects 
 def init(args):
     project_dir=os.path.join(args.path, '.cookie')
     try:
-        os.mkdir(project_dir)
+        os.makedirs(project_dir)
         os.mkdir(os.path.join(project_dir, "objects"))
-        os.mkdir(os.path.join(project_dir, "branches"))
         os.mkdir(os.path.join(project_dir, "logs"))
-        os.mkdir(os.path.join(project_dir, "refs"))
         with open(os.path.join(project_dir, "index"), 'w') as fp:
             fp.write('{}')
         with open(os.path.join(project_dir, "staged"), 'w') as fp:
@@ -102,9 +128,11 @@ def init(args):
         with open(os.path.join(project_dir, "unstaged"), 'w') as fp:
             fp.write('{"A":{},"D":{},"M":{}}')
         with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
-            pass
+            fp.write('{"name":"master","hash":""}')
         with open(os.path.join(project_dir, "userdata"), 'w') as fp:
             fp.write('{"user":"","email":""}')
+        with open(os.path.join(project_dir, "refs"), 'w') as fp:
+            fp.write('{"B":{"master":""},"T":{}}')
     except OSError:
         printColor("Already a cookie repository at {}".format(project_dir),'red')
         sys.exit(1)
@@ -112,25 +140,55 @@ def init(args):
 
 @cookieCertified
 def delete(args):
-    shutil.rmtree('.cookie')
-    printColor("    --> .cookie directory deleted. Objects kept", 'red')
+    if DEBUG:
+        shutil.rmtree('.cookie')
+        printColor(".cookie directory deleted. Objects kept", 'red')
+    else:
+        printColor("Command is for developer only. Delete repo manually if needed.", 'red')
+        printColor("Cookie does not assume responsability!", "red")
 
 @cookieCertified
 def add(args):
+    status(args,quiet=True)
     stageFiles(args.paths)
 
 @cookieCertified
 def checkout(args):
-    pass
+    if args.ref == None:
+        printColor("This does nothing, but is allowed. Give me some arguments!", "blue")
+        sys.exit(0)
+    with open(os.path.join('.cookie', 'refs'), 'r') as refsFile:
+        refs=json.load(refsFile)
+    if args.ref not in refs['B'] and args.ref not in refs['T']:
+        try:
+            objType=getObjectType(args.ref)
+        except NoSuchObjectException:
+            printColor("There is no such commit to check out!", "red")
+            sys.exit(1)
+        if objType != 'C':
+            printColor("That's not the hash of a commit, where did you get that?", "red") 
+            sys.exit(1)                                                                             #there's improvement to be done here
+        snapshot=getSnapshotFromCommit(args.ref)                                                    #get snapshot and raise notACommitError
+    else:
+        if args.ref in refs['B']:
+            printColor("Checking out branch {}...".format(args.refs), "green")
+            snapshot=getSnapshotFromCommit(refs['B'][args.ref])
+        if args.ref in refs['T']:
+            printColor("Checking out tag {}...".format(args.refs), "green")
+            snapshot=getSnapshotFromCommit(refs['T'][args.ref])
+    resetToSnapshot(snapshot)
+
+@cookieCertified
+def new_branch(args):
+    with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
+        head=json.load(headFile)  
 
 @cookieCertified
 def status(args, quiet=False):
     compareToIndex()
     resolveStagingMatches()
     if not quiet:
-        print("")
         printStaged()
-        print("")
         printUnstaged()
 
 @cookieCertified
@@ -141,34 +199,36 @@ def commit(args):
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
         sys.exit(1) 
     metaData=['C']
-    if os.stat(os.path.join('.cookie', 'HEAD')).st_size == 0:
+    with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
+        head=json.load(headFile)
+    if head["hash"] == "" :
         metaData.append('None')
-    else:
-        with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
-            metaData.append(headFile.read())
+    else :
+        metaData.append(head["hash"])
     metaData.append('A')
-    with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
-        userdata=json.load(fp)
-        
-    if userdata['user'] == "":
-        printColor("Please login with a valid e-mail first!",'red')
-        printColor("Use 'cookie login'",'white')
-        sys.exit(0)
+    if DEBUG:
+        metaData.append("Totally_Valid_Username")
     else:
-        metaData.append(userdata['user'])
-    
+        with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
+            userdata=json.load(fp)
+            
+        if userdata['user'] == "":
+            printColor("Please login with a valid e-mail first!",'red')
+            printColor("Use 'cookie login'",'white')
+            sys.exit(0)
+        else:
+            metaData.append(userdata['user'])
     metaData.append(args.message)
     metaData.append(str(time()))
-    
     targetDirs=getTargetDirs()
-    
     metaData.append(generateSnapshot(targetDirs))
     newCommit=Commit(':'.join(metaData))
     store(newCommit, os.path.join('.cookie', 'objects'))
     with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
-        headFile.write(newCommit.getHash())
+        head["hash"]=newCommit.getHash()
+        json.dump(head, headFile)
     resetStagingArea()
-    saveIndex(targetDirs)
+    #saveIndex(targetDirs)
     printColor("Successfully commited changes.","green")
     printColor("Current commit hash: "+newCommit.getHash(), 'green')
 
