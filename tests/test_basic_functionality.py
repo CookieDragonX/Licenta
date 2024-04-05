@@ -34,7 +34,7 @@ def test_status():
         capture_output = True,
         text = True 
     )
-    assert result.stdout==''
+    assert "Nothing new here! No changes found." in result.stdout
     with open("file.txt", 'w') as file:
         file.write("dummy content")
     result = subprocess.run(

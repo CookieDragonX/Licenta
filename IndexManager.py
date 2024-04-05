@@ -1,7 +1,7 @@
 import os,sys
 from stat import *
 import json
-from ObjectManager import store, createBlob
+from ObjectManager import store, load, createBlob
 from Tree import Tree
 from Blob import Blob
 from prettyPrintLib import printColor
@@ -23,6 +23,8 @@ def statDictionary(mode):
 
 def getIndex(dir, data, targetDirs, ignoreTarget):
     for file in os.listdir(dir):
+        if file == '.cookie' or file == '.git':
+            continue
         pathname = os.path.join(dir, file)
         if file not in targetDirs:
             if not ignoreTarget:
@@ -93,26 +95,26 @@ def createCommit(args, DEBUG=False):
 
 def TreeHash(dir, index, objectsPath, targetDirs):
     metaData=['T']
-    for pathname in os.listdir(dir):
+    for file in os.listdir(dir):
+        if dir=='.':
+            pathname=file
+        else:
+            pathname=os.path.join(dir,file)
         if pathname == '.cookie' or pathname == '.git':
             continue
         if pathname not in targetDirs: 
             if pathname in index:
-                metaData.append(os.path.join(dir, pathname))
+                metaData.append(pathname)
                 metaData.append(index[pathname]['hash']) #case where there's an unmodified file in the repo
             else:
                 #case where file is not tracked 
                 pass
         elif os.path.isdir(pathname):
-            metaData.append(os.path.join(dir, pathname))
-            metaData.append(TreeHash(os.path.join(dir, pathname), index, objectsPath, targetDirs))
+            metaData.append(pathname)
+            metaData.append(TreeHash(pathname, index, objectsPath, targetDirs))
         else:
-            if pathname in index:
-                metaData.append(os.path.join(dir, pathname))
-                metaData.append(index['hash'])
-            else:
-                metaData.append(os.path.join(dir, pathname))
-                metaData.append(addFileToIndex(pathname))
+            metaData.append(pathname)
+            metaData.append(addFileToIndex(pathname))
     tree=Tree(':'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
@@ -178,8 +180,15 @@ def populateDifferences(dir, index, staged, differences):
             differences['D'].update({item: statDictionary(mode)})
             continue
         mode = os.lstat(item)
-        if index.get(item)!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
-            differences['M'].update({item: statDictionary(mode)})        
+        itemData=index.get(item)
+        committedHash=itemData['hash']
+        del itemData['hash']
+        if itemData!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
+            committedBlob=load(committedHash, os.path.join('.cookie', 'objects'))
+            with open(item, 'r') as fp:
+                currentContent=fp.read()
+            if currentContent!=committedBlob.content:
+                differences['M'].update({item: statDictionary(mode)})
     return differences
 
 def printStaged():
@@ -208,7 +217,9 @@ def printStaged():
         if staged['X']!={}:
             printColor("-->Files with unknown modifications:",'green')
             print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
-    
+        return True
+    return False
+
 def printUnstaged():
     with open(os.path.join('.cookie', 'unstaged'), 'r') as unstagedFile:
         unstaged=json.load(unstagedFile)
@@ -224,13 +235,19 @@ def printUnstaged():
             printColor("-->Files modified:",'red')
             print(*["   {}".format(file) for file in unstaged['M']], sep=os.linesep)
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        return True
+    return False
 
 def generateStatus(args, quiet=True):
     compareToIndex()
     resolveStagingMatches()
     if not quiet:
-        printStaged()
-        printUnstaged()
+        outputStaged=False
+        outputStaged=printStaged()
+        outputUnstaged=False
+        outputUnstaged=printUnstaged()
+        if not outputStaged and not outputUnstaged:
+            printColor("Nothing new here! No changes found.", "blue")
 
 def stageFiles(paths):
     stagedPath=os.path.join('.cookie', 'staged')

@@ -7,14 +7,14 @@ from RemotingManager import editLoginFile
 from IndexManager import createDirectoryStructure, stageFiles, generateStatus, createCommit
 from BranchingManager import checkoutSnapshot
 
-#                      __   .__                              
-#   ____  ____   ____ |  | _|__| ____   ___  __ ____   ______
-# _/ ___\/  _ \ /  _ \|  |/ /  |/ __ \  \  \/ // ___\ /  ___/
-# \  \__(  <_> |  <_> )    <|  \  ___/   \   /\  \___ \___ \ 
-#  \___  >____/ \____/|__|_ \__|\___  >   \_/  \___  >____  >
-#      \/                  \/       \/             \/     \/                     
-# 
-
+cookieWordArt='''
+                                 __   .__        
+              ____  ____   ____ |  | _|__| ____  
+            _/ ___\/  _ \ /  _ \|  |/ /  |/ __ \ 
+            \  \__(  <_> |  <_> )    <|  \  ___/ 
+             \___  >____/ \____/|__|_ \__|\___  >
+                 \/                  \/       \/ 
+'''
 DEBUG=True  #make testing easier :D
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
@@ -132,6 +132,7 @@ def cookieCertified(fct):       #decorator for functions that work with objects 
 
 
 def init(args):
+    print(cookieWordArt)
     createDirectoryStructure(args)
 
 @cookieCertified
@@ -145,7 +146,7 @@ def delete(args):
 
 @cookieCertified
 def add(args):
-    status(args,quiet=True)
+    generateStatus(args,quiet=True)
     stageFiles(args.paths)
 
 @cookieCertified
@@ -157,7 +158,7 @@ def create_branch(args):
     pass
 
 @cookieCertified
-def status(args, quiet=False):
+def status(args):
     generateStatus(args, quiet=False)
 
 @cookieCertified

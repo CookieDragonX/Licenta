@@ -10,7 +10,7 @@ class Blob(Object):
             metaDataDecoded=metaData.decode(encoding='utf-8')
         except AttributeError:
             metaDataDecoded=metaData
-        metaDataSplit=metaDataDecoded.split(':')[1:]
+        metaDataSplit=metaDataDecoded.split(':')
         self.filename=metaDataSplit[1]
         self.content=':'.join(metaDataSplit[2:])
     def getMetaData(self):
