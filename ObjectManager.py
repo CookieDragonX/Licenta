@@ -38,8 +38,8 @@ def getHash(path): #only Blob but not really an useful method
 def createBlob(path):
     with open(path, 'r') as fp:
         fileContent=fp.read()
-    blobContent=':'.join(['B', path, fileContent])
-    return Blob(blobContent)
+    metaData=':'.join(['B', path, fileContent])
+    return Blob(metaData)
 
 def getObjectType(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
