@@ -5,6 +5,9 @@ from ObjectManager import store, createBlob
 from Tree import Tree
 from Blob import Blob
 from prettyPrintLib import printColor
+from Commit import Commit
+from time import time
+
 
 def statDictionary(mode):
     dictionary={}
@@ -48,6 +51,45 @@ def getTargetDirs():
             if separated_dirs[0:length]!=[]:
                 dirs.append(os.path.join(*separated_dirs[0:length]))
     return dirs
+
+def createCommit(args, DEBUG=False):
+    generateStatus(args,quiet=True)
+    if not isThereStagedStuff():
+        printColor("There is noting to commit...", "blue")
+        printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        sys.exit(1) 
+    metaData=['C']
+    with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
+        head=json.load(headFile)
+    if head["hash"] == "" :
+        metaData.append('None')
+    else :
+        metaData.append(head["hash"])
+    metaData.append('A')
+    if DEBUG:
+        metaData.append("Totally_Valid_Username")
+    else:
+        with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
+            userdata=json.load(fp)
+            
+        if userdata['user'] == "":
+            printColor("Please login with a valid e-mail first!",'red')
+            printColor("Use 'cookie login'",'white')
+            sys.exit(0)
+        else:
+            metaData.append(userdata['user'])
+    metaData.append(args.message)
+    metaData.append(str(time()))
+    targetDirs=getTargetDirs()
+    metaData.append(generateSnapshot(targetDirs))
+    newCommit=Commit(':'.join(metaData))
+    store(newCommit, os.path.join('.cookie', 'objects'))
+    with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
+        head["hash"]=newCommit.getHash()
+        json.dump(head, headFile)
+    resetStagingArea()
+    printColor("Successfully commited changes.","green")
+    printColor("Current commit hash: {}".format(newCommit.getHash()), 'green')
 
 def TreeHash(dir, index, objectsPath, targetDirs):
     metaData=['T']
@@ -182,7 +224,13 @@ def printUnstaged():
             printColor("-->Files modified:",'red')
             print(*["   {}".format(file) for file in unstaged['M']], sep=os.linesep)
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
-    
+
+def generateStatus(args, quiet=True):
+    compareToIndex()
+    resolveStagingMatches()
+    if not quiet:
+        printStaged()
+        printUnstaged()
 
 def stageFiles(paths):
     stagedPath=os.path.join('.cookie', 'staged')
@@ -234,3 +282,28 @@ def isThereStagedStuff():
         staged=json.load(stagingFile)
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
+    
+def createDirectoryStructure(args):
+    project_dir=os.path.join(args.path, '.cookie')
+    try:
+        os.makedirs(project_dir)
+        os.mkdir(os.path.join(project_dir, "objects"))
+        os.mkdir(os.path.join(project_dir, "logs"))
+        with open(os.path.join(project_dir, "index"), 'w') as fp:
+            fp.write('{}')
+        with open(os.path.join(project_dir, "staged"), 'w') as fp:
+            fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
+        with open(os.path.join(project_dir, "unstaged"), 'w') as fp:
+            fp.write('{"A":{},"D":{},"M":{}}')
+        with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
+            fp.write('{"name":"master","hash":""}')
+        with open(os.path.join(project_dir, "userdata"), 'w') as fp:
+            fp.write('{"user":"","email":""}')
+        with open(os.path.join(project_dir, "refs"), 'w') as fp:
+            fp.write('{"B":{"master":""},"T":{}}')
+    except OSError:
+        printColor("Already a cookie repository at {}".format(project_dir),'red')
+        sys.exit(1)
+    printColor("Successfully initialized a cookie repository at {}".format(project_dir),'green')
+
+

@@ -1,4 +1,3 @@
-from Object import Object
 from errors import NoSuchObjectException
 import os
 from hashlib import sha1 
@@ -101,4 +100,6 @@ def mergeCommits(target, source, objectsPath):
     #new commit has snapshot mergeTrees(target.getSnapshot(), source.getSnapshot())
     store(Commit(':'.join(mergeCommitData)), objectsPath)
 
-
+def getSnapshotFromCommit(hash):
+    commit=load(hash, os.path.join('.cookie', 'objects'))
+    return commit.snapshot
