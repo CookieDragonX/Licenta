@@ -18,9 +18,7 @@ TO DO:
 
 - write more tests
 
----- BUG ---- 
-Check all usage of ':' character splitting
-- for example in commit message ':' character breaks command
+- handle '?' character in commit messages, branch names and whatever else is needed
 
 - either do not allow for ':' char to be used or find other split/way to store data
 
