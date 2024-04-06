@@ -12,12 +12,14 @@ from hashlib import sha1
 
 
 class Commit(Object):
-    def __init__(self,metaData) -> None:
-        super().__init__(metaData)
-        metaDataDecoded=metaData.decode(encoding='utf-8')
+    def __init__(self, metaData) -> None:
+        try:
+            metaDataDecoded=metaData.decode(encoding='utf-8')
+        except AttributeError:
+            metaDataDecoded=metaData
         metaDataSplit=metaDataDecoded.split(':')[1:]
         self.parents=[]
-        iterator=1
+        iter=0
         for parent in metaDataSplit:
             if parent=='A':
                 iter+=1
@@ -30,4 +32,4 @@ class Commit(Object):
         self.snapshot=metaDataSplit[iter+3]
 
     def getMetaData(self):
-        return 'C:{}:A:{}:{}:{}:{}'.format(':'.join(self.parents),self.author, self.message, self.time, self.snapshot)
+        return ('C:{}:A:{}:{}:{}:{}'.format(':'.join(self.parents),self.author, self.message, self.time, self.snapshot)).encode('utf-8')
