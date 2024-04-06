@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-from prettyPrintLib import printColor
+from utils.prettyPrintLib import printColor
 import shutil
 from RemotingManager import editLoginFile
 from IndexManager import createDirectoryStructure, stageFiles, generateStatus, createCommit
