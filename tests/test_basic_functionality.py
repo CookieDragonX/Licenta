@@ -1,8 +1,6 @@
 import os
 import json
-from IndexManager import *
 from cookieLib import *
-from ObjectManager import *
 import subprocess
 import shutil
 

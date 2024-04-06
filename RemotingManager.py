@@ -1,4 +1,4 @@
-from prettyPrintLib import printColor
+from utils.prettyPrintLib import printColor
 import os
 import json
 

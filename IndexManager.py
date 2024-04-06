@@ -1,11 +1,11 @@
 import os,sys
 from stat import *
 import json
-from ObjectManager import store, load, createBlob
-from Tree import Tree
-from Blob import Blob
-from prettyPrintLib import printColor
-from Commit import Commit
+from objectLib.ObjectManager import store, load, createBlob
+from objectLib.Tree import Tree
+from objectLib.Blob import Blob
+from objectLib.Commit import Commit
+from utils.prettyPrintLib import printColor
 from time import time
 from BranchingManager import updateBranchSnapshot
 
@@ -86,7 +86,7 @@ def createCommit(args, DEBUG=False):
     metaData.append(str(time()))
     targetDirs=getTargetDirs()
     metaData.append(generateSnapshot(targetDirs))
-    newCommit=Commit(':'.join(metaData))
+    newCommit=Commit('?'.join(metaData))
     store(newCommit, os.path.join('.cookie', 'objects'))
     with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
         head["hash"]=newCommit.getHash()
@@ -120,7 +120,7 @@ def TreeHash(dir, index, objectsPath, targetDirs):
         else:
             metaData.append(pathname)
             metaData.append(addFileToIndex(pathname))
-    tree=Tree(':'.join(metaData))
+    tree=Tree('?'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
 
@@ -302,7 +302,7 @@ def storeStagedFiles():
     for file in stagedFiles:
         with open(file, 'r') as fp:
             fileContent=fp.read()
-        blobContent=':'.join(['B', file, fileContent])
+        blobContent='?'.join(['B', file, fileContent])
         store(Blob(blobContent.encode(encoding='utf-8')), os.path.join('.cookie', 'objects'))
 
 def isThereStagedStuff():
