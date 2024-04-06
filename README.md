@@ -18,13 +18,7 @@ TO DO:
 
 - write more tests
 
-- handle '?' character in commit messages, branch names and whatever else is needed
-
-- either do not allow for ':' char to be used or find other split/way to store data
-
-- PLAN FOR THIS ---> replace with '?', seems like git itself doesn't allow it, in pr names at least!!!
-
-- if they appear remove them, no one will ever know :D
+- handle '?' character usage in commit messages, branch names and whatever else is needed
 
 
 ---- LOW TO NO PRIO? ----
