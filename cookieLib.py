@@ -1,11 +1,16 @@
 import argparse
 import sys
 import os
-from utils.prettyPrintLib import printColor
 import shutil
+import json
+
+# implemented libs and functions
+from utils.prettyPrintLib import printColor
 from RemotingManager import editLoginFile
 from IndexManager import createDirectoryStructure, stageFiles, generateStatus, createCommit
 from BranchingManager import checkoutSnapshot, createBranch, updateHead
+from undoLib import undoCommand
+
 
 cookieWordArt='''
                                  __   .__        
@@ -15,7 +20,7 @@ cookieWordArt='''
              \___  >____/ \____/|__|_ \__|\___  >
                  \/                  \/       \/ 
 '''
-DEBUG=True  #make testing easier :D
+DEBUG=False  #make testing easier :D
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
@@ -92,6 +97,14 @@ argsp.add_argument("ref",
                    default=None,
                    help="Hash or branch to base new branch upon. If left empty will create based on current branch")
 
+#Undo subcommand definition
+argsp = argsubparsers.add_parser("undo", help="Undo a command")
+argsp.add_argument("index",
+                   metavar="index",
+                   default=None,
+                   help="Command index to undo")
+
+
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
     if args.command == 'add':
@@ -110,12 +123,14 @@ def main(argv=sys.argv[1:]):
         login(args)
     elif args.command == 'delete':
         delete(args)
+    elif args.command == 'undo':
+        undo(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
 
-def cookieCertified(fct):       #decorator for functions that work with objects to that everything happens at correct repo location
-    def inner(*argv, **kwargs):
+def cookieRepoCertified(fct):       #decorator for functions that work with objects to that everything happens at correct repo location
+    def inner(*args, **kwargs):
         prevwd=""
         initial=os.getcwd()
         while '.cookie' not in os.listdir():
@@ -125,47 +140,77 @@ def cookieCertified(fct):       #decorator for functions that work with objects 
                 printColor('Could not resolve cookie repository at this location!','red')
                 printColor('Make sure you are in the correct location...','white')
                 sys.exit(1)
-        rez=fct(*argv, **kwargs)
+        rez=fct(*args, **kwargs)
         os.chdir(initial)
         return rez
     return inner
 
+def addToUndoCache(fct):
+    def inner(*args, **kwargs):
+        rez=fct(*args, **kwargs)
+        commandData=vars(args[0])
+        if commandData["command"]=="delete":
+            printColor("There's no undo-ing this...", "red")
+            printColor("Clone Repository again!", "blue")
+        else:
+            with open(os.path.join('.cookie', 'history'), 'r') as historyFile:
+                history=json.load(historyFile)
+            index=history["index"]
+            history["commands"][index+1]=commandData
+            history["index"]=history["index"]+1
+            with open(os.path.join('.cookie', 'history'), 'w') as historyFile:
+                historyFile.seek(0)
+                historyFile.write(json.dumps(history, indent=4))
+        return rez
+    return inner
 
 def init(args):
     print(cookieWordArt)
     createDirectoryStructure(args)
 
-@cookieCertified
+@addToUndoCache
+@cookieRepoCertified
 def delete(args):
     if DEBUG:
         shutil.rmtree('.cookie')
-        printColor(".cookie directory deleted. Objects kept", 'red')
+        printColor(".cookie directory deleted. Files kept...", 'red')
     else:
-        printColor("Command is for developer only. Delete repo manually if needed.", 'red')
+        printColor("Command is for cookie developers only...", 'red')
+        printColor("Delete repo manually if needed.", "red")
         printColor("Cookie does not assume responsability!", "red")
+        sys.exit(1)
 
-@cookieCertified
+@addToUndoCache
+@cookieRepoCertified
 def add(args):
     generateStatus(args,quiet=True)
     stageFiles(args.paths)
 
-@cookieCertified
+@addToUndoCache
+@cookieRepoCertified
 def checkout(args):
     checkoutSnapshot(args)
 
-@cookieCertified
+@addToUndoCache
+@cookieRepoCertified
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref)
     updateHead(args.branch, args.ref==None, args.ref)
 
-@cookieCertified
+@cookieRepoCertified
 def status(args):
     generateStatus(args, quiet=False)
 
-@cookieCertified
+@addToUndoCache
+@cookieRepoCertified
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
 
-@cookieCertified
+@addToUndoCache
+@cookieRepoCertified
 def login(args):
     editLoginFile(args)
+
+@cookieRepoCertified
+def undo(args):
+    undoCommand(args)

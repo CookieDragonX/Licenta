@@ -9,7 +9,6 @@ import shutil
 #
 #   - there should be not directory named 'Test_Repo' as this test
 #       will create it and apply basic commands on it
-#   - DEBUG should be true in order for login to not matter
 #
 ##################################################################
 
@@ -27,6 +26,18 @@ def test_branching1():
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", "file.txt"]
     )
+    #login
+    test_user="Awesome_User"
+    test_email="totally_valid_address@gmail.com"
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "login", "-u", test_user, "-e", test_email],
+        capture_output = True,
+        text = True 
+    )
+    with open(os.path.join(".cookie", "userdata"), "r") as file:
+        userdata=json.load(file)
+    assert userdata["user"]==test_user
+    assert userdata["email"]==test_email
     #create commit
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Added file.txt"]
@@ -46,10 +57,14 @@ def test_branching1():
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", "file.txt"]
     )
+
     #commit on secondary branch
-    subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Changed file.txt on secondary branch"]
+    result=subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Changed file.txt on secondary branch"],
+        capture_output=True,
+        text=True
     )
+    assert "Successfully commited changes on branch 'secondary_branch'" in result.stdout
     #switch back to master
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "checkout", "master"]
@@ -62,6 +77,11 @@ def test_branching1():
     assert "dummy content" in content
 
 def test_cleanup():
-    os.chdir(cookiePath)
+    result = subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "delete"],
+        capture_output = True,
+        text = True 
+    )
+    assert "Cookie does not assume responsability!" in result.stdout
+    os.chdir("..")
     shutil.rmtree("Test_Repo")
-    assert not os.path.exists("Test_Repo")

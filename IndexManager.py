@@ -330,6 +330,8 @@ def createDirectoryStructure(args):
             fp.write('{"user":"","email":""}')
         with open(os.path.join(project_dir, "refs"), 'w') as fp:
             fp.write('{"B":{"master":""},"T":{}}')
+        with open(os.path.join(project_dir, "history"), "w") as fp:
+            fp.write('{"index":0,"commands":{}}')
     except OSError:
         printColor("Already a cookie repository at {}".format(project_dir),'red')
         sys.exit(1)
