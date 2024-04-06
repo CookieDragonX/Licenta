@@ -1,4 +1,4 @@
-from objectLib.Object import Object
+from libs.objectLib.Object import Object
 
 # Commit --> struct{
 #     parents : array{Commit}

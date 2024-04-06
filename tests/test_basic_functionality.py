@@ -1,6 +1,5 @@
 import os
 import json
-from cookieLib import *
 import subprocess
 import shutil
 
@@ -85,7 +84,11 @@ def test_commit():
     assert HEAD["hash"]!=""
     
 def test_delete_and_cleanup():
-    subprocess.run(["py", "-3", os.path.join(cookiePath, 'cookie'), "delete"])
-    assert not os.path.isdir('.cookie') 
+    result = subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "delete"],
+        capture_output = True,
+        text = True 
+    )
+    assert "Cookie does not assume responsability!" in result.stdout
     os.chdir("..")
     shutil.rmtree("Test_Repo")

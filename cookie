@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import cookieLib
+import libs.mainCookieLib as cookie
 
 #                      __   .__                              
 #   ____  ____   ____ |  | _|__| ____   ___  __ ____   ______
@@ -9,4 +9,4 @@ import cookieLib
 #      \/                  \/       \/             \/     \/                     
 # 
 
-cookieLib.main()
+cookie.main()

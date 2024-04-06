@@ -1,6 +1,6 @@
 import json
 import os
-from objectLib.ObjectManager import load, getObjectType, getSnapshotFromCommit
+from libs.objectLib.ObjectManager import load, getObjectType, getSnapshotFromCommit
 from utils.prettyPrintLib import printColor
 import sys
 from errors import BranchExistsException, NoSuchObjectException

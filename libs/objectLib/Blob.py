@@ -1,4 +1,4 @@
-from objectLib.Object import Object
+from libs.objectLib.Object import Object
 from hashlib import sha1
 
 # Blob --> array of bytes
