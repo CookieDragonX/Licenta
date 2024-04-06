@@ -11,7 +11,7 @@ import shutil
 #
 #   - there should be not directory named 'Test_Repo' as this test
 #       will create it and apply basic commands on it
-#
+#   
 ##################################################################
 
 cookiePath="D:\\stuffs\\Licenta"
