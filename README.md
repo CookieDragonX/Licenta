@@ -1,6 +1,7 @@
+==============================
 Cookie File Versioning System
 - Milencovici Radoliub Vlad
-
+==============================
 TO DO:
 
 ---- TOP PRIO ----
@@ -9,15 +10,23 @@ TO DO:
 
 - checkout strategy test more
 
-
-- <BUG> Check all usage of ':' character splitting
-        - for example in commit message ':' character breaks command
-        - either do not allow for ':' char to be used or find other split/way to store data
-        - PLAN FOR THIS ---> replace with '?', seems like git itself doesn't allow it, in pr names at least!!!
-        - if they appear remove them, no one will ever know :D
-
 - merging strategies
+
+- cookie undo
+
 - format file names when adding...
+
+- write more tests
+
+---- BUG ---- 
+Check all usage of ':' character splitting
+- for example in commit message ':' character breaks command
+
+- either do not allow for ':' char to be used or find other split/way to store data
+
+- PLAN FOR THIS ---> replace with '?', seems like git itself doesn't allow it, in pr names at least!!!
+
+- if they appear remove them, no one will ever know :D
 
 
 ---- LOW TO NO PRIO? ----
