@@ -1,4 +1,4 @@
-from objectLib.Object import Object
+from libs.objectLib.Object import Object
 
 # Tree --> map{string, Tree|Blob}
 # T:path:hash:path:hash:path:hash...

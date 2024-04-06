@@ -1,9 +1,9 @@
 from errors import NoSuchObjectException
 import os
 from hashlib import sha1 
-from objectLib.Blob import Blob
-from objectLib.Tree import Tree
-from objectLib.Commit import Commit
+from libs.objectLib.Blob import Blob
+from libs.objectLib.Tree import Tree
+from libs.objectLib.Commit import Commit
 
 def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
