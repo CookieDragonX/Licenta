@@ -5,7 +5,7 @@ from prettyPrintLib import printColor
 import shutil
 from RemotingManager import editLoginFile
 from IndexManager import createDirectoryStructure, stageFiles, generateStatus, createCommit
-from BranchingManager import checkoutSnapshot
+from BranchingManager import checkoutSnapshot, createBranch, updateHead
 
 cookieWordArt='''
                                  __   .__        
@@ -83,8 +83,8 @@ argsp = argsubparsers.add_parser("create_branch", help="Create a new branch.")
 argsp.add_argument("-b",
                    "--branch",
                    metavar="branch",
-                   nargs="?",
                    default=None,
+                   required=True,
                    help="Branch name to create.")
 argsp.add_argument("ref",
                    metavar="ref",
@@ -155,7 +155,8 @@ def checkout(args):
 
 @cookieCertified
 def create_branch(args):
-    pass
+    createBranch(args.branch, args.ref==None, args.ref)
+    updateHead(args.branch, args.ref==None, args.ref)
 
 @cookieCertified
 def status(args):

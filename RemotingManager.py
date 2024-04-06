@@ -20,4 +20,5 @@ def  editLoginFile(args):
     if email != '':
         data["email"] = email
     with open(os.path.join('.cookie', 'userdata'), 'w') as fp:
-        json.dump(data, fp)
+        fp.seek(0)
+        fp.write(json.dumps(data, indent=4))

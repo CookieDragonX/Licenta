@@ -5,7 +5,6 @@ from Blob import Blob
 from Tree import Tree
 from Commit import Commit
 
-
 def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException

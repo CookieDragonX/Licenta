@@ -7,6 +7,7 @@ from Blob import Blob
 from prettyPrintLib import printColor
 from Commit import Commit
 from time import time
+from BranchingManager import updateBranchSnapshot
 
 
 def statDictionary(mode):
@@ -42,6 +43,7 @@ def saveIndex(targetDirs):
     indexPath=os.path.join('.cookie', 'index')
     dictionary=getIndex(".", {}, targetDirs, False)
     with open(indexPath, "w") as index:
+        index.seek(0)
         index.write(json.dumps(dictionary, indent=4))
 
 def getTargetDirs():
@@ -88,10 +90,13 @@ def createCommit(args, DEBUG=False):
     store(newCommit, os.path.join('.cookie', 'objects'))
     with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
         head["hash"]=newCommit.getHash()
-        json.dump(head, headFile)
+        headFile.seek(0)
+        headFile.write(json.dumps(head, indent=4))
+        currentBranch=head["name"]
     resetStagingArea()
-    printColor("Successfully commited changes.","green")
-    printColor("Current commit hash: {}".format(newCommit.getHash()), 'green')
+    updateBranchSnapshot()
+    printColor("Successfully commited changes on branch '{}'".format(currentBranch),"green")
+    printColor("Current commit hash: '{}'".format(newCommit.getHash()), 'green')
 
 def TreeHash(dir, index, objectsPath, targetDirs):
     metaData=['T']
@@ -134,6 +139,7 @@ def addFileToIndex(pathname):
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
     with open(indexPath, 'w') as indexFile:
+        indexFile.seek(0)
         indexFile.write(json.dumps(index, indent=4))
     return blob.getHash()
 
@@ -148,6 +154,7 @@ def compareToIndex():
                }
     differences=populateDifferences(".", index, staged, differences)
     with open(os.path.join('.cookie', 'unstaged'), 'w') as unstaged:
+        unstaged.seek(0)
         unstaged.write(json.dumps(differences, indent=4))
 
 def resolveStagingMatches(thorough=False):
@@ -180,7 +187,7 @@ def populateDifferences(dir, index, staged, differences):
             differences['D'].update({item: statDictionary(mode)})
             continue
         mode = os.lstat(item)
-        itemData=index.get(item)
+        itemData=index[item]
         committedHash=itemData['hash']
         del itemData['hash']
         if itemData!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
@@ -266,9 +273,14 @@ def stageFiles(paths):
         elif pathname in unstaged['M']:
             staged['M'][pathname]=statDictionary(os.lstat(pathname))
             del unstaged['M'][pathname]
+        else:
+            printColor("Cannot stage file '{}'".format(pathname), "red")
+            printColor("Make sure it exists or contains differences!", "red")
     with open(stagedPath, "w") as outfile:
+        outfile.seek(0)
         outfile.write(json.dumps(staged, indent=4))
     with open(unstagedPath, "w") as outfile:
+        outfile.seek(0)
         outfile.write(json.dumps(unstaged, indent=4))
 
 def getStagedFiles():
