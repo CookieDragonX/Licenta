@@ -19,7 +19,7 @@ def checkoutSnapshot(args):
             printColor("There is no such commit to check out!", "red")
             sys.exit(1)
         if objType != 'C':
-            printColor("That's not the hash of a commit, where did you get that?", "red") 
+            printColor("[DEV ERROR][checkoutSnapshot] That's not the hash of a commit, where did you get that?", "red") 
             sys.exit(1)                                                                             #there's improvement to be done here
         snapshot=getSnapshotFromCommit(args.ref)                                                    #get snapshot and raise notACommitError
     else:
@@ -54,7 +54,7 @@ def resetToSnapshot(hash, action='reset'):
             #logic for merging changes with commit that gets checked out
             pass
         else:
-            printColor("wtf this should never happen", 'red')
+            printColor("[DEV ERROR][resetToSnapshot] action undefined {}".format(action), 'red')
     with open(indexPath, 'w') as indexFile:
         indexFile.seek(0)
         indexFile.write(json.dumps(index, indent=4))
@@ -80,7 +80,7 @@ def createBranch(branchName, currentRef=True, ref=None):
                 ref=head["hash"]
         if not currentRef :
             if ref==None:
-                printColor("This should never happen, pls debug if it did", "red")
+                printColor("[DEV ERROR][createBranch] Method should take given ref but no ref given!", "red")
                 sys.exit(1)
         with open(os.path.join('.cookie', 'refs'), 'r') as refsFile:
             refs=json.load(refsFile) 

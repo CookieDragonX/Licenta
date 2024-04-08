@@ -5,6 +5,8 @@ TO DO:
 
 ---- TOP PRIO ----
  
+- change blob creation methods to take data from cache not path!
+
 - encrypt data in objects
 
 - checkout strategy test more
@@ -15,6 +17,7 @@ TO DO:
         - either do not allow for ':' char to be used or find other split/way to store data
 
 - merging strategies
+
 - format file names when adding...
 
 

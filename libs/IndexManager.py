@@ -157,8 +157,70 @@ def compareToIndex():
         unstaged.seek(0)
         unstaged.write(json.dumps(differences, indent=4))
 
-def resolveStagingMatches(thorough=False):
-    #method should match some stuff to find renames/movement/copying/renamed
+def resolveAddedStaging(pathname, staged, index):
+    #check for renamed files
+    oldFilePathname=list(staged['D'].keys())[list(staged['D'].values()).index(staged['A'][pathname])]
+    if len(oldFilePathname) == 0:
+        # no renaming here, no sir
+        pass
+    if len(oldFilePathname) > 1:
+        printColor("[DEV ERROR][resolveAddedStaging] Unicorn case! More than one file with the same stat dictionary in index!", "red")
+        sys.exit(1)
+    elif len(oldFilePathname) == 1:
+        oldFilePathname=oldFilePathname[0]
+        if oldFilePathname not in index:
+            printColor("[DEV ERROR][resolveAddedStaging] Detected file deletion but no such file is recorded: {}".format(oldFilePathname), "red")
+            sys.exit(1)
+        recordedBlob=load(index[oldFilePathname]['hash'])
+        with open(pathname, 'r'):
+            newContent=pathname.read()
+        if recordedBlob.content==newContent:
+            #file renamed, remove from A and D, and add to R
+            del staged['A'][pathname]
+            del staged['D'][oldFilePathname]
+            staged['R'][oldFilePathname]=pathname
+        
+    #check for copied files
+    indexedDictionaries=[val.pop('hash', None) for val in index.values()]
+    list(indexedDictionaries.keys())[list(indexedDictionaries.values()).index(staged['A'][pathname])]
+    if len(oldFilePathname) == 0:
+        # no renaming here, no sir
+        pass
+    elif len(sourceFilePathname) > 1:
+        printColor("[DEV ERROR][resolveAddedStaging] Unicorn case! More than one file with the same stat dictionary in index!", "red")
+        sys.exit(1)
+    elif len(sourceFilePathname) == 1:
+        sourceFilePathname=sourceFilePathname[0]
+        recordedBlob=load(index[sourceFilePathname]['hash'])
+        with open(pathname, 'r'):
+            newContent=pathname.read()
+        if recordedBlob.content==newContent:
+            #file copied, remove from A and D, and add to R
+            del staged['A'][pathname]
+            staged['C'][sourceFilePathname]=pathname
+
+# def resolveDeletedStaging(pathname, staged, index):   #maybe someday
+#     pass
+
+def resolveModifiedStaging(pathname, staged, index):
+    if pathname in index:
+        oldStats=index[pathname]
+        recordedBlob=load(oldStats['hash'])
+        del oldStats['hash']
+        with open(pathname, 'r'):
+            newContent=pathname.read()
+        if recordedBlob.content==newContent:
+            if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
+                staged['T'][pathname]=staged['M'][pathname]
+                del staged['M'][pathname]
+            else:
+                staged['X'][pathname]=staged['M'][pathname]
+                del staged['M'][pathname]
+        else:
+            #file's just modified bro
+            pass
+    else:
+        printColor("[DEV ERROR][resolveModifiedStaging] file should not appear as M if not in index!", "red")
     pass
 
 def resetStagingArea():
@@ -247,7 +309,6 @@ def printUnstaged():
 
 def generateStatus(args, quiet=True):
     compareToIndex()
-    resolveStagingMatches()
     if not quiet:
         outputStaged=False
         outputStaged=printStaged()
@@ -263,15 +324,22 @@ def stageFiles(paths):
     unstagedPath=os.path.join('.cookie', 'unstaged')
     with open(unstagedPath, 'r') as unstagedFile:
         unstaged=json.load(unstagedFile)
+    with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
+        index=json.load(indexFile)
     for pathname in paths:
         if pathname in unstaged['A']:
             staged['A'][pathname]=statDictionary(os.lstat(pathname))
+            resolveAddedStaging(pathname, staged, index)
+            cacheFile(pathname, changeType='A')
             del unstaged['A'][pathname]
         elif pathname in unstaged['D']:
             staged['D'][pathname]=statDictionary(os.lstat(pathname))
+            # resolveDeletedStaging(pathname, staged, index)       #maybe someday but today there's no such case
             del unstaged['D'][pathname]
         elif pathname in unstaged['M']:
             staged['M'][pathname]=statDictionary(os.lstat(pathname))
+            resolveModifiedStaging(pathname, staged, index)
+            cacheFile(pathname, changeType='M')
             del unstaged['M'][pathname]
         else:
             printColor("Cannot stage file '{}'".format(pathname), "red")
@@ -311,13 +379,23 @@ def isThereStagedStuff():
         staged=json.load(stagingFile)
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
-    
+
+def cacheFile(pathname, changeType):
+    if changeType not in ['A', 'M']:
+        printColor("[DEV ERROR][cacheFile] Change type unknown!", "red")    
+    with open(pathname, 'r') as fileToCache:
+        fileContent=fileToCache.read()
+    with open(os.path.join('.cookie', 'cache', changeType, pathname), 'w') as cacheFile:
+        cacheFile.write(fileContent)
+
 def createDirectoryStructure(args):
     project_dir=os.path.join(args.path, '.cookie')
     try:
         os.makedirs(project_dir)
         os.mkdir(os.path.join(project_dir, "objects"))
         os.mkdir(os.path.join(project_dir, "logs"))
+        os.makedirs(os.path.join(project_dir, "cache", "A"))
+        os.makedirs(os.path.join(project_dir, "cache", "M"))
         with open(os.path.join(project_dir, "index"), 'w') as fp:
             fp.write('{}')
         with open(os.path.join(project_dir, "staged"), 'w') as fp:
@@ -332,9 +410,9 @@ def createDirectoryStructure(args):
             fp.write('{"B":{"master":""},"T":{}}')
         with open(os.path.join(project_dir, "history"), "w") as fp:
             fp.write('{"index":0,"commands":{}}')
-    except OSError:
+    except OSError as e:
+        print(e.__traceback__)
         printColor("Already a cookie repository at {}".format(project_dir),'red')
         sys.exit(1)
     printColor("Successfully initialized a cookie repository at {}".format(project_dir),'green')
-
 
