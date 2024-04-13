@@ -21,11 +21,14 @@ def statDictionary(mode):
     return dictionary
 
 
-def getIndex(dir, data, targetDirs, ignoreTarget):
+def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
     for file in os.listdir(dir):
-        if file == '.cookie' or file == '.git':
+        if file == '.cookie' or file == '.git' or file in ignoreDirs:
             continue
-        pathname = os.path.join(dir, file)
+        if dir=='.':
+            pathname=file
+        else:
+            pathname=os.path.join(dir,file)
         if file not in targetDirs:
             if not ignoreTarget:
                 continue
@@ -33,17 +36,11 @@ def getIndex(dir, data, targetDirs, ignoreTarget):
         if S_ISDIR(mode.st_mode) or S_ISREG(mode.st_mode):
             data[file]=statDictionary(mode)
             if S_ISDIR(mode.st_mode) and file!='.cookie':
-                getIndex(os.path.join(file), data, targetDirs, ignoreTarget)
+                getIndex(pathname, data, targetDirs, ignoreTarget, ignoreDirs)
         else:
             print('Skipping %s, unknown file type' % file) 
     return data
 
-def saveIndex(targetDirs):
-    indexPath=os.path.join('.cookie', 'index')
-    dictionary=getIndex(".", {}, targetDirs, False)
-    with open(indexPath, "w") as index:
-        index.seek(0)
-        index.write(json.dumps(dictionary, indent=4))
 
 def getTargetDirs():
     stagedFiles=getStagedFiles()
@@ -84,7 +81,8 @@ def createCommit(args, DEBUG=False):
     metaData.append(args.message)
     metaData.append(str(time()))
     targetDirs=getTargetDirs()
-    metaData.append(generateSnapshot(targetDirs))
+    ignoreDirs=getDeletedFiles()
+    metaData.append(generateSnapshot(targetDirs, ignoreDirs))
     newCommit=Commit('?'.join(metaData))
     store(newCommit, os.path.join('.cookie', 'objects'))
     with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
@@ -97,14 +95,14 @@ def createCommit(args, DEBUG=False):
     printColor("Successfully commited changes on branch '{}'".format(currentBranch),"green")
     printColor("Current commit hash: '{}'".format(newCommit.getHash()), 'green')
 
-def TreeHash(dir, index, objectsPath, targetDirs):
+def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
     metaData=['T']
     for file in os.listdir(dir):
         if dir=='.':
             pathname=file
         else:
             pathname=os.path.join(dir,file)
-        if pathname == '.cookie' or pathname == '.git':
+        if pathname == '.cookie' or pathname == '.git' or pathname in ignoreDirs:
             continue
         if pathname not in targetDirs: 
             if pathname in index:
@@ -115,7 +113,7 @@ def TreeHash(dir, index, objectsPath, targetDirs):
                 pass
         elif os.path.isdir(pathname):
             metaData.append(pathname)
-            metaData.append(TreeHash(pathname, index, objectsPath, targetDirs))
+            metaData.append(TreeHash(pathname, index, objectsPath, targetDirs, ignoreDirs))
         else:
             metaData.append(pathname)
             metaData.append(addFileToIndex(pathname))
@@ -123,17 +121,17 @@ def TreeHash(dir, index, objectsPath, targetDirs):
     store(tree, objectsPath)
     return tree.getHash()
 
-def generateSnapshot(targetDirs):
+def generateSnapshot(targetDirs, ignoreDirs):
     with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
         index=json.load(indexFile)
-    return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs)
+    return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
 
 def addFileToIndex(pathname):
     indexPath=os.path.join('.cookie', 'index')
     with open(indexPath, 'r') as indexFile:
         index=json.load(indexFile)
     mode = os.lstat(pathname)
-    blob = createBlob(pathname)
+    blob = createBlob(os.path.join('.cookie', 'cache', pathname))
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
@@ -176,7 +174,7 @@ def resolveAddedStaging(pathname, staged, index):
             if oldFilePathname not in index:
                 printColor("[DEV ERROR][resolveAddedStaging] Detected file deletion but no such file is recorded: {}".format(oldFilePathname), "red")
                 sys.exit(1)
-            recordedBlob=load(index[oldFilePathname]['hash'])
+            recordedBlob=load(index[oldFilePathname]['hash'], os.path.join('.cookie', 'objects'))
             with open(pathname, 'r'):
                 newContent=pathname.read()
             if recordedBlob.content==newContent:
@@ -203,7 +201,7 @@ def resolveAddedStaging(pathname, staged, index):
             sys.exit(1)
         elif len(sourceFilePathname) == 1:
             sourceFilePathname=sourceFilePathname[0]
-            recordedBlob=load(index[sourceFilePathname]['hash'])
+            recordedBlob=load(index[sourceFilePathname]['hash'], os.path.join('.cookie', 'objects'))
             with open(pathname, 'r'):
                 newContent=pathname.read()
             if recordedBlob.content==newContent:
@@ -214,27 +212,32 @@ def resolveAddedStaging(pathname, staged, index):
 def resolveDeletedStaging(pathname, staged, index):   
     # pass WHEN FILE IS DELETED BUT IS IN STAGED['A'] OR STAGED['M'] REMOVE FROM THERE!!!
     if pathname in staged['A']:
+        del staged['D'][pathname]
         del staged['A'][pathname]
     if pathname in staged['M']:
+        del staged['D'][pathname]
         del staged['M'][pathname]
     if pathname in staged['C']:
+        del staged['D'][pathname]
         del staged['C'][pathname]
     if pathname in staged['R']:
         staged['D'][staged['R'][pathname]]="empty"
         del staged['R'][pathname]
     if pathname in staged['T']:
+        del staged['D'][pathname]
         del staged['T'][pathname]
     if pathname in staged['X']:
+        del staged['D'][pathname]
         del staged['X'][pathname]
 
 def resolveModifiedStaging(pathname, staged, index):
     # handle different types of changes
     if pathname in index:
         oldStats=index[pathname]
-        recordedBlob=load(oldStats['hash'])
+        recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
-        with open(pathname, 'r'):
-            newContent=pathname.read()
+        with open(pathname, 'r') as fp:
+            newContent=fp.read()
         if recordedBlob.content==newContent:
             if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
                 staged['T'][pathname]=staged['M'][pathname]
@@ -246,7 +249,7 @@ def resolveModifiedStaging(pathname, staged, index):
             #file's just modified bro
             pass
     elif pathname in staged['A']:
-        cacheFile(pathname, changeType='A')
+        cacheFile(pathname)
         staged['A'][pathname]=staged['M'][pathname]
         del staged['M'][pathname]
     elif pathname in staged['M']:
@@ -254,10 +257,10 @@ def resolveModifiedStaging(pathname, staged, index):
         pass
     elif pathname in staged['T'] or pathname in staged['X']:
         oldStats=index[pathname]
-        recordedBlob=load(oldStats['hash'])
+        recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
-        with open(pathname, 'r'):
-            newContent=pathname.read()
+        with open(pathname, 'r') as fp:
+            newContent=fp.read()
         if recordedBlob.content==newContent:
             if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
                 staged['T'][pathname]=staged['M'][pathname]
@@ -281,7 +284,7 @@ def populateDifferences(dir, index, staged, differences):
     #check files different to index
     for item in index:  #this makes sense, check for items in index if they are changed!
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
             continue
         mode = os.lstat(item)
         itemData=index[item]
@@ -291,35 +294,36 @@ def populateDifferences(dir, index, staged, differences):
     #check files different to staging area
     for item in staged['A']:
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
             continue
-        mode = os.lstat(item)
+        mode = os.lstat(item)   
         if statDictionary(mode) != staged['A'][item]:
             differences['M'].update({item: statDictionary(mode)})
     for item in staged['M']:
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
             continue
         mode = os.lstat(item)
         if statDictionary(mode) != staged['M'][item]:
             differences['M'].update({item: statDictionary(mode)})
     for item in staged['D']:
         if os.path.exists(item):
+            mode = os.lstat(item)
             differences['A'].update({item: statDictionary(mode)})
     for item in staged['C']:
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
             continue
     for item in staged['R']:
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
             continue
     for item in staged['T']:
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
     for item in staged['X']:
         if not os.path.exists(item):
-            differences['D'].update({item: statDictionary(mode)})
+            differences['D'].update({item: "empty"})
     #check mostly for new files
     for file in os.listdir(dir):
         if file=='.cookie' or file=='.git' :
@@ -331,7 +335,7 @@ def populateDifferences(dir, index, staged, differences):
         mode = os.lstat(pathname)
         if pathname not in index and pathname not in staged['A'] and pathname not in staged['D'] and pathname not in staged['C'] and pathname not in staged['R'] and pathname not in staged['X']:
             if S_ISDIR(mode.st_mode):
-                differences.update(getIndex(pathname, {} , targetDirs=[], ignoreTarget=True))
+                differences.update(getIndex(pathname, {} , targetDirs=[], ignoreTarget=True, ignoreDirs=[]))
             elif S_ISREG(mode.st_mode):
                 differences['A'].update({pathname: statDictionary(mode)})
             else:
@@ -410,16 +414,16 @@ def stageFiles(paths):
     for pathname in paths:
         if pathname in unstaged['A']:
             staged['A'][pathname]=statDictionary(os.lstat(pathname))
-            cacheFile(pathname, changeType='A')
+            cacheFile(pathname)
             resolveAddedStaging(pathname, staged, index)
             del unstaged['A'][pathname]
         elif pathname in unstaged['D']:
-            staged['D'][pathname]=statDictionary(os.lstat(pathname))
-            # resolveDeletedStaging(pathname, staged, index)       #maybe someday but today there's no such case
+            staged['D'][pathname]="empty"          #statDictionary(os.lstat(pathname))
+            resolveDeletedStaging(pathname, staged, index) 
             del unstaged['D'][pathname]
         elif pathname in unstaged['M']:
             staged['M'][pathname]=statDictionary(os.lstat(pathname))
-            cacheFile(pathname, changeType='M')
+            cacheFile(pathname)
             resolveModifiedStaging(pathname, staged, index)
             del unstaged['M'][pathname]
         else:
@@ -438,7 +442,7 @@ def getStagedFiles():
         staged=json.load(stagingFile)
     stagedFiles=dict()
     stagedFiles.update(staged['A'])
-    stagedFiles.update(staged['D'])
+    #stagedFiles.update(staged['D'])
     stagedFiles.update(staged['M'])
     stagedFiles.update(staged['C'])
     stagedFiles.update(staged['T'])
@@ -446,13 +450,13 @@ def getStagedFiles():
     stagedFiles.update(staged['X'])
     return list(stagedFiles.keys())
 
-def storeStagedFiles():
-    stagedFiles=getStagedFiles()
-    for file in stagedFiles:
-        with open(file, 'r') as fp:
-            fileContent=fp.read()
-        blobContent='?'.join(['B', file, fileContent])
-        store(Blob(blobContent.encode(encoding='utf-8')), os.path.join('.cookie', 'objects'))
+def getDeletedFiles():
+    stagedPath=os.path.join('.cookie', 'staged')
+    with open(stagedPath, 'r') as stagingFile:
+        staged=json.load(stagingFile)
+    deletedFiles=dict()
+    deletedFiles.update(staged['D'])
+    return list(deletedFiles.keys())
 
 def isThereStagedStuff():
     stagedPath=os.path.join('.cookie', 'staged')
@@ -461,12 +465,12 @@ def isThereStagedStuff():
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
 
-def cacheFile(pathname, changeType):
-    if changeType not in ['A', 'M']:
-        printColor("[DEV ERROR][cacheFile] Change type unknown!", "red")    
+def cacheFile(pathname):
+    #if changeType not in ['A', 'M']:
+    #    printColor("[DEV ERROR][cacheFile] Change type unknown!", "red")    
     with open(pathname, 'r') as fileToCache:
         fileContent=fileToCache.read()
-    with open(os.path.join('.cookie', 'cache', changeType, pathname), 'w') as cacheFile:
+    with open(os.path.join('.cookie', 'cache', pathname), 'w') as cacheFile:
         cacheFile.write(fileContent)
 
 def createDirectoryStructure(args):

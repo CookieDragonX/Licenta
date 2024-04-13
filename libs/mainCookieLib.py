@@ -20,7 +20,7 @@ cookieWordArt='''
              \___  >____/ \____/|__|_ \__|\___  >
                  \/                  \/       \/ 
 '''
-DEBUG=True  #make testing easier :D
+DEBUG=False  #make manual testing easier, but paradoxically make automated tests fail D:
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
