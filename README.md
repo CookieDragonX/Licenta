@@ -11,15 +11,13 @@ TO DO:
 
 - checkout strategy test more
 
-
-- <BUG> Check all usage of ':' character splitting
-        - for example in commit message ':' character breaks command
-        - either do not allow for ':' char to be used or find other split/way to store data
-
 - merging strategies
 
 - format file names when adding...
 
+- ssh connection with server
 
----- LOW TO NO PRIO? ----
-- client server
+- undo command 
+
+---- LOW PRIO ----
+- check for incomplete checkout
