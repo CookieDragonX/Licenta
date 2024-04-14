@@ -7,8 +7,9 @@ import json
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
-from libs.IndexManager import createDirectoryStructure, stageFiles, generateStatus, createCommit
+from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead
+from libs.BasicUtils import createDirectoryStructure
 from libs.undoLib import undoCommand
 
 
@@ -20,7 +21,7 @@ cookieWordArt='''
              \___  >____/ \____/|__|_ \__|\___  >
                  \/                  \/       \/ 
 '''
-DEBUG=False  #make testing easier :D
+DEBUG=False  #make manual testing easier, but paradoxically make automated tests fail D:
 
 argparser = argparse.ArgumentParser(description="Cookie: World's Best SCM!")
 
@@ -40,6 +41,12 @@ argsp = argsubparsers.add_parser("add", help="Add a file to staging area.")
 argsp.add_argument("paths",
                    nargs="+",
                    help="File(s) to add to staging area")
+
+#remove subcommand definition
+argsp = argsubparsers.add_parser("remove", help="Remove a file to staging area.")
+argsp.add_argument("paths",
+                   nargs="+",
+                   help="File(s) to remove from staging area")
 
 #status subcommand definition
 argsp = argsubparsers.add_parser("status", help="Report the status of the current cookie repository.")
@@ -109,6 +116,8 @@ def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
     if args.command == 'add':
         add(args)
+    elif args.command == 'remove':
+        remove(args)
     elif args.command == 'init':
         init(args)
     elif args.command == 'commit':
@@ -185,6 +194,12 @@ def delete(args):
 def add(args):
     generateStatus(args,quiet=True)
     stageFiles(args.paths)
+
+@addToUndoCache
+@cookieRepoCertified
+def remove(args):
+    generateStatus(args, quiet=True)
+    unstageFiles(args.paths)
 
 @addToUndoCache
 @cookieRepoCertified

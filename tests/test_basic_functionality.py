@@ -14,6 +14,8 @@ import shutil
 cookiePath="D:\\stuffs\\Licenta"
 
 def test_init():
+    if os.path.exists("Test_Repo"):
+        shutil.rmtree("Test_Repo")
     subprocess.run(["py", "-3", os.path.join(cookiePath, 'cookie'), "init", "Test_Repo"])
     assert os.path.isdir(os.path.join('Test_Repo', '.cookie', 'objects')) 
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'HEAD')) 

@@ -14,6 +14,8 @@ import shutil
 cookiePath="D:\\stuffs\\Licenta"
 
 def test_branching1():
+    if os.path.exists("Test_Repo"):
+        shutil.rmtree("Test_Repo")
     #initialize
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "init", "Test_Repo"]
@@ -83,4 +85,4 @@ def test_cleanup():
     )
     assert "Cookie does not assume responsability!" in result.stdout
     os.chdir("..")
-    shutil.rmtree("Test_Repo")
+    #shutil.rmtree("Test_Repo")
