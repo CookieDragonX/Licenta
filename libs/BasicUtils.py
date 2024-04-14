@@ -3,6 +3,24 @@ from utils.prettyPrintLib import printColor
 import sys
 import json
 
+def getResource(name):
+    #for all json objects in .cookie dir
+    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata"]:
+        printColor("Unknown resource {}".format(name), "red")
+    path=os.path.join(".cookie", name)
+    with open(path, "r") as fp:
+        content=json.load(fp)
+    return content
+
+def dumpResource(name, newContent):
+    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata"]:
+        printColor("Unknown resource {}".format(name), "red")
+    path=os.path.join(".cookie", name)
+    with open(path, "w") as fp:
+        fp.seek(0)
+        fp.write(json.dumps(newContent, indent=4))
+
+
 def createDirectoryStructure(args):
     project_dir=os.path.join(args.path, '.cookie')
     try:
@@ -41,8 +59,7 @@ def statDictionary(mode):
     return dictionary
 
 def printStaged():
-    with open(os.path.join('.cookie', 'staged'), 'r') as stagedFile:
-        staged=json.load(stagedFile)
+    staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         printColor("    Changes to be committed:","white")
         if staged['A']!={}:
@@ -70,8 +87,7 @@ def printStaged():
     return False
 
 def printUnstaged():
-    with open(os.path.join('.cookie', 'unstaged'), 'r') as unstagedFile:
-        unstaged=json.load(unstagedFile)
+    unstaged=getResource("unstaged")
     if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
         printColor("    Unstaged changes:","white")
         if unstaged['A']!={}:

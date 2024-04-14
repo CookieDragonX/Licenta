@@ -1,13 +1,12 @@
 import os,sys
 from stat import *
-import json
 from libs.objectLib.ObjectManager import store, load, createBlob
 from libs.objectLib.Tree import Tree
 from libs.objectLib.Commit import Commit
 from utils.prettyPrintLib import printColor
 from time import time
 from libs.BranchingManager import updateBranchSnapshot
-from libs.BasicUtils import statDictionary, printStaged, printUnstaged
+from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource
 
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
@@ -47,8 +46,7 @@ def createCommit(args, DEBUG=False):
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
         sys.exit(1) 
     metaData=['C']
-    with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
-        head=json.load(headFile)
+    head=getResource("HEAD")
     if head["hash"] == "" :
         metaData.append('None')
     else :
@@ -57,9 +55,7 @@ def createCommit(args, DEBUG=False):
     if DEBUG:
         metaData.append("Totally_Valid_Username")
     else:
-        with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
-            userdata=json.load(fp)
-            
+        userdata=getResource("userdata")    
         if userdata['user'] == "":
             printColor("Please login with a valid e-mail first!",'red')
             printColor("Use 'cookie login'",'white')
@@ -73,11 +69,10 @@ def createCommit(args, DEBUG=False):
     metaData.append(generateSnapshot(targetDirs, ignoreDirs))
     newCommit=Commit('?'.join(metaData))
     store(newCommit, os.path.join('.cookie', 'objects'))
-    with open(os.path.join('.cookie', 'HEAD'), 'w') as headFile:
-        head["hash"]=newCommit.getHash()
-        headFile.seek(0)
-        headFile.write(json.dumps(head, indent=4))
-        currentBranch=head["name"]
+    head["hash"]=newCommit.getHash()
+    currentBranch=head["name"]
+    dumpResource("HEAD", head)
+    
     resetStagingAreaAndIndex(ignoreDirs)
     updateBranchSnapshot()
     printColor("Successfully commited changes on branch '{}'".format(currentBranch),"green")
@@ -110,37 +105,29 @@ def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
     return tree.getHash()
 
 def generateSnapshot(targetDirs, ignoreDirs):
-    with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
-        index=json.load(indexFile)
+    index=getResource("index")
     return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
 
 def addFileToIndex(pathname):
     indexPath=os.path.join('.cookie', 'index')
-    with open(indexPath, 'r') as indexFile:
-        index=json.load(indexFile)
+    index=getResource("index")
     mode = os.lstat(pathname)
     blob = createBlob(os.path.join('.cookie', 'cache', pathname))
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
-    with open(indexPath, 'w') as indexFile:
-        indexFile.seek(0)
-        indexFile.write(json.dumps(index, indent=4))
+    dumpResource("index", index)
     return blob.getHash()
 
 def compareToIndex():
-    with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
-        index=json.load(indexFile)
-    with open(os.path.join('.cookie', 'staged'), 'r') as stagingFile:
-        staged=json.load(stagingFile)
+    index=getResource("index")
+    staged=getResource("staged")
     differences={'A':{},
                'D':{},
                'M':{}
                }
     differences=populateDifferences(".", index, staged, differences)
-    with open(os.path.join('.cookie', 'unstaged'), 'w') as unstaged:
-        unstaged.seek(0)
-        unstaged.write(json.dumps(differences, indent=4))
+    dumpResource("unstaged", differences)
 
 def resolveAddedStaging(pathname, staged, index):
     #check for renamed files WIP
@@ -289,20 +276,16 @@ def resolveModifiedStaging(pathname, staged, index):
     pass
 
 def resetStagingAreaAndIndex(ignoreDirs):
-    with open(os.path.join(".cookie", "staged"), 'w') as fp:
-        fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
-    indexPath = os.path.join(".cookie", "index") 
-    with open(indexPath, "r") as indexFile:
-        index=json.load(indexFile)
+    dumpResource("staged", {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}})
+    index=getResource("index")
     for file in ignoreDirs:
         if file in index: 
             del index[file]
-    with open(indexPath, "w") as indexFile:
-        indexFile.seek(0)
-        indexFile.write(json.dumps(index, indent=4))
+    dumpResource("index", index)
         
 #some fixes in logic to be done here, EDIT 12.3 some changes made needs testing. Big method :(
      #13.4 literally one month later, i think i got it?   
+     #14.4 looks good
 def populateDifferences(dir, index, staged, differences):
     #check files different to index
     for item in index:  #this makes sense, check for items in index if they are changed!
@@ -384,14 +367,9 @@ def generateStatus(args, quiet=True):
             printColor("Nothing new here! No changes found.", "blue")
 
 def stageFiles(paths):
-    stagedPath=os.path.join('.cookie', 'staged')
-    with open(stagedPath, 'r') as stagingFile:
-        staged=json.load(stagingFile)
-    unstagedPath=os.path.join('.cookie', 'unstaged')
-    with open(unstagedPath, 'r') as unstagedFile:
-        unstaged=json.load(unstagedFile)
-    with open(os.path.join('.cookie', 'index'), 'r') as indexFile:
-        index=json.load(indexFile)
+    staged=getResource("staged")
+    unstaged=getResource("unstaged")
+    index=getResource("index")
     for pathname in paths:
         pathname=os.path.relpath(pathname, "")
         if pathname in unstaged['A']:
@@ -416,33 +394,24 @@ def stageFiles(paths):
         else:
             printColor("Cannot stage file '{}'".format(pathname), "red")
             printColor("Make sure it exists or contains differences!", "red")
-    with open(stagedPath, "w") as outfile:
-        outfile.seek(0)
-        outfile.write(json.dumps(staged, indent=4))
-    with open(unstagedPath, "w") as outfile:
-        outfile.seek(0)
-        outfile.write(json.dumps(unstaged, indent=4))
+    dumpResource("staged", staged)
+    dumpResource("unstaged", unstaged)
 
 def unstageFiles(paths):
-    stagedPath=os.path.join('.cookie', 'staged')
-    with open(stagedPath, 'r') as stagingFile:
-        staged=json.load(stagingFile)
+    staged=getResource("staged")
     for path in paths:
-        pathname=os.path.relpath(pathname, "")
+        path=os.path.relpath(path, "")
         if path in staged['A']:
             del staged['A'][path]
         if path in staged['D']:
             del staged['D'][path]
         if path in staged['M']:
             del staged['M'][path]
-    with open(stagedPath, "w") as outfile:
-        outfile.seek(0)
-        outfile.write(json.dumps(staged, indent=4))
+
+    dumpResource("staged", staged)
 
 def getStagedFiles():
-    stagedPath=os.path.join('.cookie', 'staged')
-    with open(stagedPath, 'r') as stagingFile:
-        staged=json.load(stagingFile)
+    staged=getResource("staged")
     stagedFiles=dict()
     stagedFiles.update(staged['A'])
     #stagedFiles.update(staged['D'])
@@ -454,17 +423,13 @@ def getStagedFiles():
     return list(stagedFiles.keys())
 
 def getDeletedFiles():
-    stagedPath=os.path.join('.cookie', 'staged')
-    with open(stagedPath, 'r') as stagingFile:
-        staged=json.load(stagingFile)
+    staged=getResource("staged")
     deletedFiles=dict()
     deletedFiles.update(staged['D'])
     return list(deletedFiles.keys())
 
 def isThereStagedStuff():
-    stagedPath=os.path.join('.cookie', 'staged')
-    with open(stagedPath, 'r') as stagingFile:
-        staged=json.load(stagingFile)
+    staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
 
