@@ -1,23 +1,20 @@
-Cookie File Versioning System
-- Milencovici Radoliub Vlad
-
+==============================</br>
+Cookie File Versioning System</br>
+  Milencovici Radoliub Vlad</br>
+==============================</br>
 TO DO:
 
 ---- TOP PRIO ----
  
-- change blob creation methods to take data from cache not path!
-
 - encrypt data in objects
-
-- checkout strategy test more
 
 - merging strategies
 
-- format file names when adding...
-
 - ssh connection with server
 
-- undo command 
+- cookie undo
+
+- write more tests
 
 ---- LOW PRIO ----
 - check for incomplete checkout
