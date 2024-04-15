@@ -28,6 +28,7 @@ def createDirectoryStructure(args):
         os.mkdir(os.path.join(project_dir, "objects"))
         os.mkdir(os.path.join(project_dir, "logs"))
         os.makedirs(os.path.join(project_dir, "cache"))
+        os.makedirs(os.path.join(project_dir, "undo_cache"))
         with open(os.path.join(project_dir, "index"), 'w') as fp:
             fp.write('{}')
         with open(os.path.join(project_dir, "staged"), 'w') as fp:

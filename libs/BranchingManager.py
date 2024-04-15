@@ -106,8 +106,13 @@ def deleteBranch(branchName):
     if branchName not in refs['B']:
         printColor("No such branch to be deleted {}".format(branchName))
         sys.exit(1)
+    undoInfo=refs['B'][branchName]
     if head["name"]==branchName:
         head["name"] = "DETACHED"
     del refs['B'][branchName]
+    undoCachePath=os.path.join(".cookie", "undo_cache", "branches")
+    os.makedirs(undoCachePath, exist_ok=True)
+    with open(os.path.join(undoCachePath, branchName), "w") as deleteBranchFile:
+        deleteBranchFile.write(undoInfo)
     dumpResource("HEAD", head)
     dumpResource("refs", refs)

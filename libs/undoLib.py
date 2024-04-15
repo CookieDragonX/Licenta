@@ -1,6 +1,8 @@
 import sys
+import os
 from utils.prettyPrintLib import printColor
 from libs.IndexManager import unstageFiles, stageFiles
+from libs.BranchingManager import deleteBranch, createBranch
 from libs.BasicUtils import getResource, dumpResource
 
 def undoCommand(args):
@@ -51,10 +53,15 @@ def undo_checkout(args):
     pass
 
 def undo_create_branch(args):
-    pass
+    deleteBranch(args["branch"])
 
 def undo_delete_branch(args):
-    pass
+    undoCachePath=os.path.join(".cookie", "undo_cache", "branches")
+    os.makedirs(undoCachePath, exist_ok=True)
+    with open(os.path.join(undoCachePath, args["branch"]), "w") as deleteBranchFile:
+        sha=deleteBranchFile.read().strip()
+    createBranch(args["branch"], currentRef=False, ref=sha)
+
 
 def undo_login(args):
     pass

@@ -7,7 +7,7 @@ TO DO:
 
 ---- TOP PRIO ----
  
-- encrypt data in objects
+- encrypt data in objects --final
 
 - merging strategies
 
@@ -16,6 +16,8 @@ TO DO:
 - cookie undo
 
 - write more tests
+
+- implement log
 
 ---- LOW PRIO ----
 - check for incomplete checkout

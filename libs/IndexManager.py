@@ -439,3 +439,7 @@ def cacheFile(pathname):
     os.makedirs(os.path.abspath(os.path.join('.cookie', 'cache', pathname, os.pardir)), exist_ok=True)
     with open(os.path.join('.cookie', 'cache', pathname), 'w') as cacheFile:
         cacheFile.write(fileContent)
+
+def printCommitData():
+    #call from CurseLib.py
+    pass

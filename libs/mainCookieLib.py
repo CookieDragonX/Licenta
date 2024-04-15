@@ -6,7 +6,7 @@ import shutil
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
-from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles
+from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles, printCommitData
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource
 from libs.UndoLib import undoCommand
@@ -113,6 +113,9 @@ argsp.add_argument("-b",
                    help="Branch name to create.")
 
 #Undo subcommand definition
+argsp = argsubparsers.add_parser("log", help="Print commit data.")
+
+#Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command")
 argsp.add_argument("index",
                    metavar="index",
@@ -145,6 +148,8 @@ def main(argv=sys.argv[1:]):
         delete(args)
     elif args.command == 'undo':
         undo(args)
+    elif args.command == 'log':
+        log(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -237,6 +242,10 @@ def commit(args):
 @cookieRepoCertified
 def login(args):
     editLoginFile(args)
+
+@cookieRepoCertified
+def log(args):
+    printCommitData()
 
 @cookieRepoCertified
 def undo(args):
