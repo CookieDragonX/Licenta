@@ -84,7 +84,38 @@ def test_commit():
         HEAD=json.load(file)
     assert HEAD["name"]=="master"
     assert HEAD["hash"]!=""
-    
+
+def test_add2():
+    os.makedirs(os.path.join("dir1", "dir2"))
+    with open(os.path.join("dir1", "dir2", "nestedFile"), "w") as fp:
+        fp.write("some stuff")
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("dir1", "dir2", "nestedFile")],
+    )
+    os.remove("file.txt")
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("file.txt")],
+    )
+    result = subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        capture_output = True,
+        text = True 
+    )
+    assert os.path.join("dir1", "dir2", "nestedFile") in result.stdout
+    assert "Files deleted" in result.stdout
+    assert "file.txt" in result.stdout
+
+def test_commit2():
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Removed file.txt& added nested file"],
+        capture_output = True,
+        text = True 
+    )
+    with open(os.path.join(".cookie", "index"), "r") as indexFile:
+        index=json.load(indexFile)
+    assert "file.txt" not in index
+    assert os.path.join("dir1", "dir2", "nestedFile") in index
+
 def test_delete_and_cleanup():
     result = subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "delete"],
@@ -93,4 +124,4 @@ def test_delete_and_cleanup():
     )
     assert "Cookie does not assume responsability!" in result.stdout
     os.chdir("..")
-    shutil.rmtree("Test_Repo")
+    #shutil.rmtree("Test_Repo")

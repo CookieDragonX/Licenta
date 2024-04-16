@@ -4,7 +4,7 @@ from hashlib import sha1
 from libs.objectLib.Blob import Blob
 from libs.objectLib.Tree import Tree
 from libs.objectLib.Commit import Commit
-
+from libs.BasicUtils import safeWrite
 def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
@@ -25,8 +25,7 @@ def store(object, objectsPath):
     id=object.getHash()
     if not os.path.isdir(os.path.join(objectsPath, id[:2])):
         os.mkdir(os.path.join(objectsPath, id[:2]))
-    with open(os.path.join(objectsPath, id[:2], id[2:]),'wb') as fp:
-        fp.write(object.getMetaData())
+    safeWrite(os.path.join(objectsPath, id[:2], id[2:]), object.getMetaData(), binary=True)
 
 def getHash(path): #only Blob but not really an useful method
     with open(path, 'r') as fp:

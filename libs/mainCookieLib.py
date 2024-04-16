@@ -2,15 +2,14 @@ import argparse
 import sys
 import os
 import shutil
-import json
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
-from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles
-from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead
-from libs.BasicUtils import createDirectoryStructure
-from libs.undoLib import undoCommand
+from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles, printCommitData
+from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
+from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource
+from libs.UndoLib import undoCommand
 
 
 cookieWordArt='''
@@ -104,10 +103,23 @@ argsp.add_argument("ref",
                    default=None,
                    help="Hash or branch to base new branch upon. If left empty will create based on current branch")
 
+#Branch deletion subcommand definition
+argsp = argsubparsers.add_parser("delete_branch", help="Delete an existing branch.")
+argsp.add_argument("-b",
+                   "--branch",
+                   metavar="branch",
+                   default=None,
+                   required=True,
+                   help="Branch name to create.")
+
+#Undo subcommand definition
+argsp = argsubparsers.add_parser("log", help="Print commit data.")
+
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command")
 argsp.add_argument("index",
                    metavar="index",
+                   nargs="?",
                    default=None,
                    help="Command index to undo")
 
@@ -126,6 +138,8 @@ def main(argv=sys.argv[1:]):
         checkout(args)
     elif args.command == 'create_branch':
         create_branch(args)
+    elif args.command == 'delete_branch':
+        delete_branch(args)
     elif args.command == 'status':
         status(args)
     elif args.command == 'login':
@@ -134,6 +148,8 @@ def main(argv=sys.argv[1:]):
         delete(args)
     elif args.command == 'undo':
         undo(args)
+    elif args.command == 'log':
+        log(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -162,14 +178,11 @@ def addToUndoCache(fct):
             printColor("There's no undo-ing this...", "red")
             printColor("Clone Repository again!", "blue")
         else:
-            with open(os.path.join('.cookie', 'history'), 'r') as historyFile:
-                history=json.load(historyFile)
+            history=getResource("history")
             index=history["index"]
             history["commands"][index+1]=commandData
             history["index"]=history["index"]+1
-            with open(os.path.join('.cookie', 'history'), 'w') as historyFile:
-                historyFile.seek(0)
-                historyFile.write(json.dumps(history, indent=4))
+            dumpResource("history", history)
         return rez
     return inner
 
@@ -177,7 +190,6 @@ def init(args):
     print(cookieWordArt)
     createDirectoryStructure(args)
 
-@addToUndoCache
 @cookieRepoCertified
 def delete(args):
     if DEBUG:
@@ -212,6 +224,11 @@ def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref)
     updateHead(args.branch, args.ref==None, args.ref)
 
+@addToUndoCache
+@cookieRepoCertified
+def delete_branch(args):
+    deleteBranch(args.branch)
+
 @cookieRepoCertified
 def status(args):
     generateStatus(args, quiet=False)
@@ -227,5 +244,11 @@ def login(args):
     editLoginFile(args)
 
 @cookieRepoCertified
+def log(args):
+    #https://stackoverflow.com/questions/43052290/representing-a-graph-in-json
+    printCommitData()
+
+@cookieRepoCertified
 def undo(args):
     undoCommand(args)
+

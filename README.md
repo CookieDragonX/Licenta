@@ -7,7 +7,7 @@ TO DO:
 
 ---- TOP PRIO ----
  
-- encrypt data in objects
+- encrypt data in objects --final
 
 - merging strategies
 
@@ -17,5 +17,10 @@ TO DO:
 
 - write more tests
 
+- implement log -- curses
+
+- concurrency for push command after implementing remote repo
+
 ---- LOW PRIO ----
-- check for incomplete checkout
+
+- everything is top prio!

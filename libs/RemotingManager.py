@@ -1,6 +1,5 @@
 from utils.prettyPrintLib import printColor
-import os
-import json
+from libs.BasicUtils import dumpResource, getResource
 
 def  editLoginFile(args):
     if args.user == None:
@@ -13,12 +12,9 @@ def  editLoginFile(args):
         email=input()
     else:
         email=args.email
-    with open(os.path.join('.cookie', 'userdata'), 'r') as fp:
-        data=json.load(fp)
+    data=getResource("userdata")
     if user != '':
         data["user"] = user
     if email != '':
         data["email"] = email
-    with open(os.path.join('.cookie', 'userdata'), 'w') as fp:
-        fp.seek(0)
-        fp.write(json.dumps(data, indent=4))
+    dumpResource("userdata", data)
