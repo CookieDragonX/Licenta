@@ -6,7 +6,7 @@ from libs.objectLib.Commit import Commit
 from utils.prettyPrintLib import printColor
 from time import time
 from libs.BranchingManager import updateBranchSnapshot
-from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource
+from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, safeWrite
 
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
@@ -109,7 +109,6 @@ def generateSnapshot(targetDirs, ignoreDirs):
     return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
 
 def addFileToIndex(pathname):
-    indexPath=os.path.join('.cookie', 'index')
     index=getResource("index")
     mode = os.lstat(pathname)
     blob = createBlob(os.path.join('.cookie', 'cache', pathname))
@@ -436,9 +435,8 @@ def isThereStagedStuff():
 def cacheFile(pathname):
     with open(pathname, 'r') as fileToCache:
         fileContent=fileToCache.read()
-    os.makedirs(os.path.abspath(os.path.join('.cookie', 'cache', pathname, os.pardir)), exist_ok=True)
-    with open(os.path.join('.cookie', 'cache', pathname), 'w') as cacheFile:
-        cacheFile.write(fileContent)
+    safeWrite(os.path.join('.cookie', 'cache', pathname), fileContent)
+
 
 def printCommitData():
     #call from CurseLib.py

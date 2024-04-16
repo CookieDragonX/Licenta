@@ -4,7 +4,7 @@ from utils.prettyPrintLib import printColor
 import sys
 from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
-from libs.BasicUtils import statDictionary, getResource, dumpResource
+from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 
 def checkoutSnapshot(args):
     new_head='DETACHED'
@@ -51,8 +51,7 @@ def updateTree(tree,  index, objectsPath, action='reset'):
         if action=='reset':
             object=load(hash, objectsPath)
             if object.__class__.__name__=='Blob':
-                with open(path, 'w') as localObject:
-                    localObject.write(object.content)
+                safeWrite(path, object.content)
                 mode = os.lstat(path)
                 index[path]=statDictionary(mode)
                 index[path]['hash'] = hash
@@ -112,7 +111,7 @@ def deleteBranch(branchName):
     del refs['B'][branchName]
     undoCachePath=os.path.join(".cookie", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
-    with open(os.path.join(undoCachePath, branchName), "w") as deleteBranchFile:
-        deleteBranchFile.write(undoInfo)
+    safeWrite(os.path.join(undoCachePath, branchName), undoInfo)
+        
     dumpResource("HEAD", head)
     dumpResource("refs", refs)

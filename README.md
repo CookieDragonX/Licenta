@@ -17,7 +17,10 @@ TO DO:
 
 - write more tests
 
-- implement log
+- implement log -- curses
+
+- concurrency for push command after implementing remote repo
 
 ---- LOW PRIO ----
-- check for incomplete checkout
+
+- everything is top prio!

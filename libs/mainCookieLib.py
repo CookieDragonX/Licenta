@@ -245,6 +245,7 @@ def login(args):
 
 @cookieRepoCertified
 def log(args):
+    #https://stackoverflow.com/questions/43052290/representing-a-graph-in-json
     printCommitData()
 
 @cookieRepoCertified

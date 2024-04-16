@@ -11,7 +11,7 @@ def undoCommand(args):
         num_check=int(args.index)
         if num_check not in range(0, int(history["index"])):
             printColor("Invalid index {}".format(num_check), "red")
-            printColor("Maximum index is {}".format(history["index"]))
+            printColor("Maximum index is {}".format(history["index"]), "red")
         indexToUndo=args.index
     else:
         indexToUndo=str(history["index"])
@@ -58,8 +58,8 @@ def undo_create_branch(args):
 def undo_delete_branch(args):
     undoCachePath=os.path.join(".cookie", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
-    with open(os.path.join(undoCachePath, args["branch"]), "w") as deleteBranchFile:
-        sha=deleteBranchFile.read().strip()
+    with open(os.path.join(undoCachePath, args["branch"]), "r") as deletedBranchFile:
+        sha=deletedBranchFile.read().strip()
     createBranch(args["branch"], currentRef=False, ref=sha)
 
 

@@ -13,36 +13,51 @@ def getResource(name):
     return content
 
 def dumpResource(name, newContent):
-    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata"]:
+    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
         printColor("Unknown resource {}".format(name), "red")
     path=os.path.join(".cookie", name)
-    with open(path, "w") as fp:
-        fp.seek(0)
-        fp.write(json.dumps(newContent, indent=4))
-
-
+    safeWrite(path, newContent, jsonDump=True)
+    
+def safeWrite(path, content, jsonDump=False, binary=False):
+    if not os.path.exists(path):
+        os.makedirs(os.path.abspath(os.path.join(path, os.pardir)), exist_ok=True)
+    bak="{}.bak".format(path)
+    if binary:
+        with open(bak, "wb") as fp:
+            if jsonDump:
+                fp.seek(0)
+                fp.write(json.dumps(content, indent=4))
+            else:
+                fp.seek(0)
+                fp.write(content)
+    else:
+        with open(bak, "w") as fp:
+            if jsonDump:
+                fp.seek(0)
+                fp.write(json.dumps(content, indent=4))
+            else:
+                fp.seek(0)
+                fp.write(content)
+    if os.path.exists(bak):
+        if os.path.exists(path):
+            os.remove(path)
+        os.rename(bak, path)
+        
 def createDirectoryStructure(args):
     project_dir=os.path.join(args.path, '.cookie')
     try:
         os.makedirs(project_dir)
         os.mkdir(os.path.join(project_dir, "objects"))
-        os.mkdir(os.path.join(project_dir, "logs"))
         os.makedirs(os.path.join(project_dir, "cache"))
         os.makedirs(os.path.join(project_dir, "undo_cache"))
-        with open(os.path.join(project_dir, "index"), 'w') as fp:
-            fp.write('{}')
-        with open(os.path.join(project_dir, "staged"), 'w') as fp:
-            fp.write('{"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}')
-        with open(os.path.join(project_dir, "unstaged"), 'w') as fp:
-            fp.write('{"A":{},"D":{},"M":{}}')
-        with open(os.path.join(project_dir, "HEAD"), 'w') as fp:
-            fp.write('{"name":"master","hash":""}')
-        with open(os.path.join(project_dir, "userdata"), 'w') as fp:
-            fp.write('{"user":"","email":""}')
-        with open(os.path.join(project_dir, "refs"), 'w') as fp:
-            fp.write('{"B":{"master":""},"T":{}}')
-        with open(os.path.join(project_dir, "history"), "w") as fp:
-            fp.write('{"index":0,"commands":{}}')
+        safeWrite(os.path.join(project_dir, "index"), {}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "staged"), {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "unstaged"), {"A":{},"D":{},"M":{}}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "HEAD"), {"name":"master","hash":""}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "userdata"), {"user":"","email":""}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "history"), {"index":0,"commands":{}}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "logs"), {"adjacency":{}, "nodes":{}, "edges":{}}, jsonDump=True)
     except OSError as e:
         print(e.__traceback__)
         printColor("Already a cookie repository at {}".format(project_dir),'red')
