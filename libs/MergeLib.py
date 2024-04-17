@@ -32,9 +32,8 @@ def findCommonAncestor(sha1, sha2, objectsPath):
     if sha1Tree.__class__!= "Tree" or sha2Tree.__class__!= "Tree":
         printColor("[DEV ERROR][findCommonAncestor] Received a hash that is not a tree!", "red")
     commonAncestorNotFound=True
-    sha1History=[sha1]
-    sha1History=[sha2]
-    #get data from log
+    
+    #get data from log YOYOOYOY FOR BOTH LISTS AT ONCE, MEMBER ANCESTORS AND CHECK ONLY NEW STUFF!!!!
 
 def mergeTrees(target, source, objectsPath): # the args are hashes
     targetTree=load(target, objectsPath)

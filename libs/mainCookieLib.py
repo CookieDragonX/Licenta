@@ -6,9 +6,10 @@ import shutil
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
-from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles, printCommitData
+from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource
+from libs.LogsManager import printCommitData
 from libs.UndoLib import undoCommand
 
 
@@ -245,8 +246,8 @@ def login(args):
 
 @cookieRepoCertified
 def log(args):
-    #https://stackoverflow.com/questions/43052290/representing-a-graph-in-json
-    printCommitData()
+    head=getResource("HEAD")
+    printCommitData(head["hash"])
 
 @cookieRepoCertified
 def undo(args):

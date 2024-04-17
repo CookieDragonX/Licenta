@@ -5,8 +5,8 @@ import json
 
 def getResource(name):
     #for all json objects in .cookie dir
-    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata"]:
-        printColor("Unknown resource {}".format(name), "red")
+    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
+        printColor("[DEV ERROR] Unknown resource {}".format(name), "red")
     path=os.path.join(".cookie", name)
     with open(path, "r") as fp:
         content=json.load(fp)
@@ -14,7 +14,7 @@ def getResource(name):
 
 def dumpResource(name, newContent):
     if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
-        printColor("Unknown resource {}".format(name), "red")
+        printColor("[DEV ERROR] Unknown resource {}".format(name), "red")
     path=os.path.join(".cookie", name)
     safeWrite(path, newContent, jsonDump=True)
     
@@ -57,7 +57,7 @@ def createDirectoryStructure(args):
         safeWrite(os.path.join(project_dir, "userdata"), {"user":"","email":""}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "history"), {"index":0,"commands":{}}, jsonDump=True)
-        safeWrite(os.path.join(project_dir, "logs"), {"adjacency":{}, "nodes":{}, "edges":{}}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "logs"), {"adj":{}, "nodes":[], "edges":{}, "edge_index":0}, jsonDump=True)
     except OSError as e:
         print(e.__traceback__)
         printColor("Already a cookie repository at {}".format(project_dir),'red')
@@ -77,6 +77,7 @@ def statDictionary(mode):
 def printStaged():
     staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
+        printColor("-----------------------------------------------------------------", "white")
         printColor("    Changes to be committed:","white")
         if staged['A']!={}:
             printColor("-->Files added:",'green')
@@ -99,12 +100,14 @@ def printStaged():
         if staged['X']!={}:
             printColor("-->Files with unknown modifications:",'green')
             print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+        printColor("-----------------------------------------------------------------", "white")
         return True
     return False
 
 def printUnstaged():
     unstaged=getResource("unstaged")
     if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
+        printColor("-----------------------------------------------------------------", "white")
         printColor("    Unstaged changes:","white")
         if unstaged['A']!={}:
             printColor("-->Files untracked:",'red')
@@ -116,5 +119,6 @@ def printUnstaged():
             printColor("-->Files modified:",'red')
             print(*["   {}".format(file) for file in unstaged['M']], sep=os.linesep)
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        printColor("-----------------------------------------------------------------", "white")
         return True
     return False

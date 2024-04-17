@@ -5,6 +5,7 @@ from libs.objectLib.Blob import Blob
 from libs.objectLib.Tree import Tree
 from libs.objectLib.Commit import Commit
 from libs.BasicUtils import safeWrite
+
 def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
@@ -66,4 +67,3 @@ def hashTree(dir, objectsPath):
 def getSnapshotFromCommit(hash, objectsPath):
     commit=load(hash, objectsPath)
     return commit.snapshot
-

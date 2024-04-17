@@ -23,21 +23,22 @@ def checkoutSnapshot(args):
             printColor("[DEV ERROR][checkoutSnapshot] That's not the hash of a commit, where did you get that?", "red") 
             sys.exit(1)                                                                             #there's improvement to be done here
         snapshot=getSnapshotFromCommit(args.ref, objectsPath)                                                    #get snapshot and raise notACommitError
+        commitHash=args.ref
     else:
         try:
             if args.ref in refs['B']:
                 printColor("Checking out branch {}...".format(args.ref), "green")
-                hash=refs['B'][args.ref]
+                commitHash=refs['B'][args.ref]
             elif args.ref in refs['T']:
                 printColor("Checking out tag {}...".format(args.ref), "green")
-                hash=refs['T'][args.ref]
-            snapshot=getSnapshotFromCommit(hash, objectsPath)
+                commitHash=refs['T'][args.ref]
+            snapshot=getSnapshotFromCommit(commitHash, objectsPath)
             new_head=args.ref
         except NoSuchObjectException as e:
-            printColor("Could not find commit with hash {}".format(hash), "red")
+            printColor("Could not find commit with hash {}".format(commitHash), "red")
             sys.exit(1)
     resetToSnapshot(snapshot)
-    updateHead(new_head, currentRef=False, ref=snapshot)
+    updateHead(new_head, currentRef=False, ref=commitHash)
 
 def resetToSnapshot(hash, action='reset'):
     objectsPath = os.path.join('.cookie', 'objects')

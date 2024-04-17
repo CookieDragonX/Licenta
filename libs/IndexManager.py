@@ -7,7 +7,7 @@ from utils.prettyPrintLib import printColor
 from time import time
 from libs.BranchingManager import updateBranchSnapshot
 from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, safeWrite
-
+from libs.LogsManager import logCommit
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
     for file in os.listdir(dir):
@@ -69,6 +69,7 @@ def createCommit(args, DEBUG=False):
     metaData.append(generateSnapshot(targetDirs, ignoreDirs))
     newCommit=Commit('?'.join(metaData))
     store(newCommit, os.path.join('.cookie', 'objects'))
+    logCommit(newCommit)
     head["hash"]=newCommit.getHash()
     currentBranch=head["name"]
     dumpResource("HEAD", head)
@@ -129,7 +130,7 @@ def compareToIndex():
     dumpResource("unstaged", differences)
 
 def resolveAddedStaging(pathname, staged, index):
-    #check for renamed files WIP
+    #check for renamed files ----- SHOULD POP MTIME!!!! ----- renaming file counts as modification
     possible_match=True
     try:
         oldFilePathname=list(staged['D'].keys())[list(staged['D'].values()).index(staged['A'][pathname])]
@@ -287,7 +288,7 @@ def resetStagingAreaAndIndex(ignoreDirs):
      #14.4 looks good
 def populateDifferences(dir, index, staged, differences):
     #check files different to index
-    for item in index:  #this makes sense, check for items in index if they are changed!
+    for item in index:
         if not os.path.exists(item): 
             if item not in staged['D']:
                 statDict=index[item]
@@ -298,7 +299,8 @@ def populateDifferences(dir, index, staged, differences):
         itemData=index[item]
         del itemData['hash']
         if itemData!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
-            differences['M'].update({item: statDictionary(mode)})
+            if item not in staged["M"]:
+                differences['M'].update({item: statDictionary(mode)})
     #check files different to staging area
     for item in staged['A']:
         if not os.path.exists(item):
@@ -436,8 +438,3 @@ def cacheFile(pathname):
     with open(pathname, 'r') as fileToCache:
         fileContent=fileToCache.read()
     safeWrite(os.path.join('.cookie', 'cache', pathname), fileContent)
-
-
-def printCommitData():
-    #call from CurseLib.py
-    pass
