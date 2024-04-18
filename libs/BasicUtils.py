@@ -3,11 +3,18 @@ from utils.prettyPrintLib import printColor
 import sys
 import json
 
-def getResource(name):
+def getResource(name, specificPath=None):
     #for all json objects in .cookie dir
     if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
-        printColor("[DEV ERROR] Unknown resource {}".format(name), "red")
-    path=os.path.join(".cookie", name)
+        printColor("[DEV ERROR][getResource] Unknown resource '{}'.".format(name), "red")
+        sys.exit(1)
+    elif specificPath:
+        if not os.path.isdir(specificPath):
+            printColor("[DEV ERROR][getResource] Cannot find resource '{}' at '{}'.".format(name, specificPath), "red")
+            sys.exit(1)
+        path=os.path.join(specificPath, name)
+    else:
+        path=os.path.join(".cookie", name)
     with open(path, "r") as fp:
         content=json.load(fp)
     return content
@@ -78,7 +85,7 @@ def printStaged():
     staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         printColor("-----------------------------------------------------------------", "white")
-        printColor("    Changes to be committed:","white")
+        printColor("    <> Changes to be committed:","white")
         if staged['A']!={}:
             printColor("-->Files added:",'green')
             print(*["   {}".format(file) for file in staged['A']], sep=os.linesep)
@@ -90,16 +97,16 @@ def printStaged():
             print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
         if staged['C']!={}:
             printColor("-->Files copied:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {} <-- {}".format(file, staged['C'][file][0]) for file in staged['C']], sep=os.linesep)
         if staged['R']!={}:
             printColor("-->Files renamed:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {} --> {}".format(staged['R'][file][0], file) for file in staged['R']], sep=os.linesep)
         if staged['T']!={}:
             printColor("-->Files with type changes:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {}".format(file) for file in staged['T']], sep=os.linesep)
         if staged['X']!={}:
             printColor("-->Files with unknown modifications:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {}".format(file) for file in staged['X']], sep=os.linesep)
         printColor("-----------------------------------------------------------------", "white")
         return True
     return False
@@ -108,7 +115,7 @@ def printUnstaged():
     unstaged=getResource("unstaged")
     if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
         printColor("-----------------------------------------------------------------", "white")
-        printColor("    Unstaged changes:","white")
+        printColor("    <> Unstaged changes:","white")
         if unstaged['A']!={}:
             printColor("-->Files untracked:",'red')
             print(*["   {}".format(file) for file in unstaged['A']], sep=os.linesep)
