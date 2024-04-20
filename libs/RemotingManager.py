@@ -18,3 +18,4 @@ def  editLoginFile(args):
     if email != '':
         data["email"] = email
     dumpResource("userdata", data)
+    printColor("Successfully logged in. Hello {}!".format(data["user"]), "green")

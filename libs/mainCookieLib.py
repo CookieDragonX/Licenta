@@ -6,9 +6,10 @@ import shutil
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
-from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles, printCommitData
+from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
-from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource
+from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
+from libs.LogsManager import printCommitData, test
 from libs.UndoLib import undoCommand
 
 
@@ -113,10 +114,29 @@ argsp.add_argument("-b",
                    help="Branch name to create.")
 
 #Undo subcommand definition
-argsp = argsubparsers.add_parser("log", help="Print commit data.")
+argsp = argsubparsers.add_parser("merge", help="Merge Commits or branches.")
+argsp.add_argument("-s",
+                   "--source",
+                   metavar="source",
+                   nargs="?",
+                   required=True,
+                   help="Source content(s) for merge.")
+
+argsp.add_argument("-t",
+                   "--target",
+                   metavar="target",
+                   nargs=1,
+                   default=None,
+                   required=False,
+                   help="Target branch or commit upon which to perform merge.")
 
 #Undo subcommand definition
-argsp = argsubparsers.add_parser("undo", help="Undo a command")
+argsp = argsubparsers.add_parser("log", help="Print commit data.")
+
+
+
+#Undo subcommand definition
+argsp = argsubparsers.add_parser("undo", help="Undo a command.")
 argsp.add_argument("index",
                    metavar="index",
                    nargs="?",
@@ -150,9 +170,18 @@ def main(argv=sys.argv[1:]):
         undo(args)
     elif args.command == 'log':
         log(args)
+    elif args.command == 'merge':
+        merge(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
+
+def parametrized(dec):
+    def layer(*args, **kwargs):
+        def repl(f):
+            return dec(f, *args, **kwargs)
+        return repl
+    return layer
 
 def cookieRepoCertified(fct):       #decorator for functions that work with objects to that everything happens at correct repo location
     def inner(*args, **kwargs):
@@ -170,16 +199,21 @@ def cookieRepoCertified(fct):       #decorator for functions that work with obje
         return rez
     return inner
 
-def addToUndoCache(fct):
+@parametrized
+def addToUndoCache(fct, saveResource=[]):
     def inner(*args, **kwargs):
+        history=getResource("history")
+        index=history["index"]
+        for resource_name in saveResource:
+            resource=getResource(resource_name)
+            safeWrite(os.path.join(".cookie", "undo_cache", str(index+1), resource_name), resource, jsonDump=True)
         rez=fct(*args, **kwargs)
         commandData=vars(args[0])
         if commandData["command"]=="delete":
             printColor("There's no undo-ing this...", "red")
             printColor("Clone Repository again!", "blue")
         else:
-            history=getResource("history")
-            index=history["index"]
+
             history["commands"][index+1]=commandData
             history["index"]=history["index"]+1
             dumpResource("history", history)
@@ -201,30 +235,30 @@ def delete(args):
         printColor("Cookie does not assume responsability!", "red")
         sys.exit(1)
 
-@addToUndoCache
+@addToUndoCache(saveResource=["staged"])
 @cookieRepoCertified
 def add(args):
     generateStatus(args,quiet=True)
     stageFiles(args.paths)
 
-@addToUndoCache
+@addToUndoCache(saveResource=["staged"])
 @cookieRepoCertified
 def remove(args):
     generateStatus(args, quiet=True)
     unstageFiles(args.paths)
 
-@addToUndoCache
+@addToUndoCache()
 @cookieRepoCertified
 def checkout(args):
     checkoutSnapshot(args)
 
-@addToUndoCache
+@addToUndoCache()
 @cookieRepoCertified
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref)
     updateHead(args.branch, args.ref==None, args.ref)
 
-@addToUndoCache
+@addToUndoCache()
 @cookieRepoCertified
 def delete_branch(args):
     deleteBranch(args.branch)
@@ -233,20 +267,26 @@ def delete_branch(args):
 def status(args):
     generateStatus(args, quiet=False)
 
-@addToUndoCache
+@addToUndoCache()
 @cookieRepoCertified
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
 
-@addToUndoCache
+@addToUndoCache()
 @cookieRepoCertified
 def login(args):
     editLoginFile(args)
 
 @cookieRepoCertified
 def log(args):
-    #https://stackoverflow.com/questions/43052290/representing-a-graph-in-json
-    printCommitData()
+    #head=getResource("HEAD")
+    #printCommitData(head["hash"])
+    test()
+
+@addToUndoCache()
+@cookieRepoCertified
+def merge(args):
+    pass
 
 @cookieRepoCertified
 def undo(args):

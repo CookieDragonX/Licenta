@@ -1,5 +1,5 @@
 from libs.objectLib.Object import Object
-from hashlib import sha1
+import os
 
 # Blob --> array of bytes
 # B:filename:text
@@ -11,8 +11,9 @@ class Blob(Object):
         except AttributeError:
             metaDataDecoded=metaData
         metaDataSplit=metaDataDecoded.split('?')
-        self.filename=metaDataSplit[1]
+        self.filenameAbsPath=metaDataSplit[1]
+        self.filename = os.sep.join(self.filenameAbsPath.split(os.sep))
         self.content='?'.join(metaDataSplit[2:])
     def getMetaData(self):
-        return ('B?{}?{}'.format(self.filename,self.content)).encode('utf-8')
+        return ('B?{}?{}'.format(self.filenameAbsPath,self.content)).encode('utf-8')
 

@@ -3,18 +3,25 @@ from utils.prettyPrintLib import printColor
 import sys
 import json
 
-def getResource(name):
+def getResource(name, specificPath=None):
     #for all json objects in .cookie dir
-    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata"]:
-        printColor("Unknown resource {}".format(name), "red")
-    path=os.path.join(".cookie", name)
+    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
+        printColor("[DEV ERROR][getResource] Unknown resource '{}'.".format(name), "red")
+        sys.exit(1)
+    elif specificPath:
+        if not os.path.isdir(specificPath):
+            printColor("[DEV ERROR][getResource] Cannot find resource '{}' at '{}'.".format(name, specificPath), "red")
+            sys.exit(1)
+        path=os.path.join(specificPath, name)
+    else:
+        path=os.path.join(".cookie", name)
     with open(path, "r") as fp:
         content=json.load(fp)
     return content
 
 def dumpResource(name, newContent):
     if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
-        printColor("Unknown resource {}".format(name), "red")
+        printColor("[DEV ERROR] Unknown resource {}".format(name), "red")
     path=os.path.join(".cookie", name)
     safeWrite(path, newContent, jsonDump=True)
     
@@ -57,7 +64,7 @@ def createDirectoryStructure(args):
         safeWrite(os.path.join(project_dir, "userdata"), {"user":"","email":""}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "history"), {"index":0,"commands":{}}, jsonDump=True)
-        safeWrite(os.path.join(project_dir, "logs"), {"adjacency":{}, "nodes":{}, "edges":{}}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "logs"), {"adj":{}, "nodes":{}, "edges":{}, "edge_index":0}, jsonDump=True)
     except OSError as e:
         print(e.__traceback__)
         printColor("Already a cookie repository at {}".format(project_dir),'red')
@@ -77,7 +84,8 @@ def statDictionary(mode):
 def printStaged():
     staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
-        printColor("    Changes to be committed:","white")
+        printColor("-----------------------------------------------------------------", "white")
+        printColor("    <> Changes to be committed:","white")
         if staged['A']!={}:
             printColor("-->Files added:",'green')
             print(*["   {}".format(file) for file in staged['A']], sep=os.linesep)
@@ -89,23 +97,32 @@ def printStaged():
             print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
         if staged['C']!={}:
             printColor("-->Files copied:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {} <-- {}".format(file, staged['C'][file][0]) for file in staged['C']], sep=os.linesep)
         if staged['R']!={}:
-            printColor("-->Files renamed:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            moved=dict()
+            for item in staged['R']:
+                if os.path.basename(item)==os.path.basename(staged['R'][item][0]):
+                    moved[item]=staged['R'][item]
+            printColor("-->Files moved:",'green')
+            print(*["   {} --> {}".format(moved[file][0], file) for file in moved], sep=os.linesep)
+            if len(moved[item]) < len(staged['R']):
+                printColor("-->Files renamed:",'green')
+                print(*["   {} --> {}".format(staged['R'][file][0], file) if file not in moved else "" for file in staged['R']], sep=os.linesep)
         if staged['T']!={}:
             printColor("-->Files with type changes:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {}".format(file) for file in staged['T']], sep=os.linesep)
         if staged['X']!={}:
             printColor("-->Files with unknown modifications:",'green')
-            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+            print(*["   {}".format(file) for file in staged['X']], sep=os.linesep)
+        printColor("-----------------------------------------------------------------", "white")
         return True
     return False
 
 def printUnstaged():
     unstaged=getResource("unstaged")
     if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
-        printColor("    Unstaged changes:","white")
+        printColor("-----------------------------------------------------------------", "white")
+        printColor("    <> Unstaged changes:","white")
         if unstaged['A']!={}:
             printColor("-->Files untracked:",'red')
             print(*["   {}".format(file) for file in unstaged['A']], sep=os.linesep)
@@ -116,5 +133,16 @@ def printUnstaged():
             printColor("-->Files modified:",'red')
             print(*["   {}".format(file) for file in unstaged['M']], sep=os.linesep)
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        printColor("-----------------------------------------------------------------", "white")
         return True
     return False
+
+def commonListElements(a, b):    
+    a_set = set(a)
+    b_set = set(b)
+     
+    # check length 
+    if len(a_set.intersection(b_set)) > 0:
+        return a_set.intersection(b_set)
+    else:
+        return None

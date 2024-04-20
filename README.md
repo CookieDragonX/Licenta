@@ -19,7 +19,9 @@ TO DO:
 
 - implement log -- curses
 
-- concurrency for push command after implementing remote repo
+- queue for push command after implementing remote repo
+
+- don't allow branch creation until first commit 
 
 ---- LOW PRIO ----
 

@@ -5,6 +5,7 @@ from libs.objectLib.Blob import Blob
 from libs.objectLib.Tree import Tree
 from libs.objectLib.Commit import Commit
 from libs.BasicUtils import safeWrite
+
 def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
@@ -33,10 +34,13 @@ def getHash(path): #only Blob but not really an useful method
     blobContent='?'.join(['B', path, fileContent])
     return sha1(blobContent.encode(encoding='utf-8'))
 
-def createBlob(path):
+def createBlob(path, forcePath=None):
     with open(path, 'r') as fp:
         fileContent=fp.read()
-    metaData='?'.join(['B', path, fileContent])
+    if forcePath:
+        metaData='?'.join(['B', forcePath, fileContent])
+    else:
+        metaData='?'.join(['B', path, fileContent])
     return Blob(metaData)
 
 def getObjectType(hash, objectsPath):
@@ -66,4 +70,3 @@ def hashTree(dir, objectsPath):
 def getSnapshotFromCommit(hash, objectsPath):
     commit=load(hash, objectsPath)
     return commit.snapshot
-

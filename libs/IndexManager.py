@@ -7,6 +7,8 @@ from utils.prettyPrintLib import printColor
 from time import time
 from libs.BranchingManager import updateBranchSnapshot
 from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, safeWrite
+from libs.LogsManager import logCommit
+from copy import deepcopy
 
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
@@ -69,6 +71,7 @@ def createCommit(args, DEBUG=False):
     metaData.append(generateSnapshot(targetDirs, ignoreDirs))
     newCommit=Commit('?'.join(metaData))
     store(newCommit, os.path.join('.cookie', 'objects'))
+    logCommit(newCommit)
     head["hash"]=newCommit.getHash()
     currentBranch=head["name"]
     dumpResource("HEAD", head)
@@ -111,7 +114,7 @@ def generateSnapshot(targetDirs, ignoreDirs):
 def addFileToIndex(pathname):
     index=getResource("index")
     mode = os.lstat(pathname)
-    blob = createBlob(os.path.join('.cookie', 'cache', pathname))
+    blob = createBlob(os.path.join('.cookie', 'cache', pathname), forcePath=pathname)
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
@@ -129,59 +132,47 @@ def compareToIndex():
     dumpResource("unstaged", differences)
 
 def resolveAddedStaging(pathname, staged, index):
-    #check for renamed files WIP
-    possible_match=True
-    try:
-        oldFilePathname=list(staged['D'].keys())[list(staged['D'].values()).index(staged['A'][pathname])]
-        print(oldFilePathname)
-    except ValueError:
-        possible_match=False
-    if possible_match:
-        if len(oldFilePathname) == 0:
-            # no renaming here, no sir
-            pass
-        if len(oldFilePathname) > 1:
-            printColor("[DEV ERROR][resolveAddedStaging] Unicorn case! More than one file with the same stat dictionary in index!", "red")
-            sys.exit(1)
-        elif len(oldFilePathname) == 1:
-            oldFilePathname=oldFilePathname[0]
-            if oldFilePathname not in index:
-                printColor("[DEV ERROR][resolveAddedStaging] Detected file deletion but no such file is recorded: {}".format(oldFilePathname), "red")
-                sys.exit(1)
-            recordedBlob=load(index[oldFilePathname]['hash'], os.path.join('.cookie', 'objects'))
-            with open(pathname, 'r'):
-                newContent=pathname.read()
-            if recordedBlob.content==newContent:
-                #file renamed, remove from A and D, and add to R
-                del staged['A'][pathname]
-                del staged['D'][oldFilePathname]
-                staged['R'][pathname]=oldFilePathname
-        
+    #check for renamed files 
+    stagedAddedPathCopy=deepcopy(staged['A'][pathname])
+    del stagedAddedPathCopy['mtime']
+    for item in list(staged['D']):
+        stagedDeletedCopy = {key: value for key, value in staged['D'][item].items() if 'mtime' not in key}
+        if stagedAddedPathCopy == stagedDeletedCopy:
+            if item not in index:
+                del staged['D'][item]
+            else:
+                oldObject=load(index[item]['hash'], os.path.join('.cookie', 'objects'))
+                with open(pathname, "r") as newFile:
+                    newFileContent=newFile.read()
+                if newFileContent==oldObject.content:
+                    # File renamed, delete stuff from where it was and add to 'R'
+                    del staged['A'][pathname]
+                    del staged['D'][item]
+                    staged['R'][pathname]=[]
+                    staged['R'][pathname].append(item)
+                    staged['R'][pathname].append(statDictionary(os.lstat(pathname)))
+                    return
     #check for copied files WIP
-    indexCopy=index
-    for val in indexCopy.values():
-        del val['hash']
-    possible_match=True
-    try:
-        list(indexCopy.keys())[list(indexCopy.values()).index(staged['A'][pathname])]
-    except ValueError:
-        possible_match=False
-    if possible_match:
-        if len(oldFilePathname) == 0:
-            # no renaming here, no sir
-            pass
-        elif len(sourceFilePathname) > 1:
-            printColor("[DEV ERROR][resolveAddedStaging] Unicorn case! More than one file with the same stat dictionary in index!", "red")
-            sys.exit(1)
-        elif len(sourceFilePathname) == 1:
-            sourceFilePathname=sourceFilePathname[0]
-            recordedBlob=load(index[sourceFilePathname]['hash'], os.path.join('.cookie', 'objects'))
-            with open(pathname, 'r'):
-                newContent=pathname.read()
-            if recordedBlob.content==newContent:
-                #file copied, remove from A and D, and add to R
+    stagedAddedPathCopy=deepcopy(staged['A'][pathname])
+    del stagedAddedPathCopy['mtime']
+    del stagedAddedPathCopy['ctime']
+    indexCopy=deepcopy(index)
+    for item in list(indexCopy):
+        del indexCopy[item]['mtime']
+        del indexCopy[item]['ctime']
+        del indexCopy[item]['hash']
+        if indexCopy[item] == stagedAddedPathCopy:
+            oldObject=load(index[item]['hash'], os.path.join('.cookie', 'objects'))
+            with open(pathname, "r") as newFile:
+                newFileContent=newFile.read()
+            if newFileContent==oldObject.content:
+                # File renamed, delete stuff from where it was and add to 'C'
                 del staged['A'][pathname]
-                staged['C'][pathname]=sourceFilePathname
+                staged['C'][pathname]=[]
+                staged['C'][pathname].append(item)
+                staged['C'][pathname].append(statDictionary(os.lstat(pathname)))
+                return
+
 
 def resolveDeletedStaging(pathname, staged, index):   
     # pass WHEN FILE IS DELETED BUT IS IN STAGED['A'] OR STAGED['M'] REMOVE FROM THERE!!!
@@ -204,36 +195,30 @@ def resolveDeletedStaging(pathname, staged, index):
         del staged['D'][pathname]
         del staged['X'][pathname]
     #also check here for renamed files!
-    possible_match=True
-    try:
-        oldFilePathname=list(staged['A'].keys())[list(staged['A'].values()).index(staged['D'][pathname])]
-    except ValueError:
-        possible_match=False
-    if possible_match:
-        if len(oldFilePathname) == 0:
-            # no renaming here, no sir
-            pass
-        if len(oldFilePathname) > 1:
-            printColor("[DEV ERROR][resolveDeletedStaging] Unicorn case! More than one file with the same stat dictionary in index!", "red")
-            sys.exit(1)
-        elif len(oldFilePathname) == 1:
-            oldFilePathname=oldFilePathname[0]
-            if oldFilePathname not in index:
-                printColor("[DEV ERROR][resolveDeletedStaging] Detected file deletion but no such file is recorded: {}".format(oldFilePathname), "red")
-                sys.exit(1)
-            recordedBlob=load(index[oldFilePathname]['hash'], os.path.join('.cookie', 'objects'))
-            with open(pathname, 'r'):
-                newContent=pathname.read()
-            if recordedBlob.content==newContent:
-                #file renamed, remove from A and D, and add to R
-                del staged['D'][pathname]
-                del staged['A'][oldFilePathname]
-                staged['R'][pathname]=oldFilePathname
+    stagedDeletedPathCopy=deepcopy(staged['D'][pathname])
+    del stagedDeletedPathCopy['mtime']
+    for item in list(staged['A']):
+        stagedAddedCopy = {key: value for key, value in staged['A'][item].items() if 'mtime' not in key}
+        if stagedDeletedPathCopy == stagedAddedCopy:
+            if item not in index:
+                del staged['D'][item]
+            else:
+                oldObject=load(os.path.join(index[staged['A']]['hash'], '.cookie', 'objects'))
+                with open(pathname, "r") as newFile:
+                    newFileContent=newFile.read()
+                if newFileContent==oldObject.content:
+                    # File renamed, delete stuff from where it was and add to 'R'
+                    del staged['A'][pathname]
+                    del staged['D'][item]
+                    staged['R'][pathname]=[]
+                    staged['R'][pathname].append(item)
+                    staged['R'][pathname].append(statDictionary(os.lstat(pathname)))
 
 def resolveModifiedStaging(pathname, staged, index):
+   
     # handle different types of changes
     if pathname in index:
-        oldStats=index[pathname]
+        oldStats=deepcopy(index[pathname])
         recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
         with open(pathname, 'r') as fp:
@@ -246,17 +231,47 @@ def resolveModifiedStaging(pathname, staged, index):
                 staged['X'][pathname]=staged['M'][pathname]
                 del staged['M'][pathname]
         else:
-            #file's just modified bro
+            #file's just modified
             pass
+    # handle changes since file was staged
     elif pathname in staged['A']:
+         #yet again, check here for renamed files!
+        stagedAddedPathCopy=deepcopy(staged['M'][pathname])
+        del stagedAddedPathCopy['mtime']
+        for item in list(staged['D']):
+            stagedDeletedCopy = {key: value for key, value in staged['D'][item].items() if 'mtime' not in key}
+            if stagedAddedPathCopy == stagedDeletedCopy:
+                if item not in index:
+                    del staged['D'][item]
+                else:
+                    oldObject=load(index[item]['hash'], os.path.join('.cookie', 'objects'))
+                    with open(pathname, "r") as newFile:
+                        newFileContent=newFile.read()
+                    if newFileContent==oldObject.content:
+                        # File renamed, delete stuff from where it was and add to 'R'
+                        del staged['M'][pathname]
+                        del staged['D'][item]
+                        del staged['A'][pathname]
+                        staged['R'][pathname]=[]
+                        staged['R'][pathname].append(item)
+                        staged['R'][pathname].append(statDictionary(os.lstat(pathname)))
+                        return
         cacheFile(pathname)
         staged['A'][pathname]=staged['M'][pathname]
         del staged['M'][pathname]
-    elif pathname in staged['M']:
-        #file's just modified bro
-        pass
+    elif pathname in staged['R']:
+        staged['A'][pathname]=staged['M'][pathname]
+        del staged['M'][pathname]
+        indexCopy=deepcopy(index[staged['R'][pathname][0]])
+        del indexCopy['hash']
+        staged['D'][staged['R'][pathname][0]]=indexCopy
+        del staged['R'][pathname]
+    elif pathname in staged['C']:
+        staged['A'][pathname]=staged['M'][pathname]
+        del staged['M'][pathname]
+        del staged['C'][pathname]
     elif pathname in staged['T'] or pathname in staged['X']:
-        oldStats=index[pathname]
+        oldStats=deepcopy(index[pathname])
         recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
         with open(pathname, 'r') as fp:
@@ -268,11 +283,13 @@ def resolveModifiedStaging(pathname, staged, index):
             else:
                 staged['X'][pathname]=staged['M'][pathname]
                 del staged['M'][pathname]
+    elif pathname in staged['M']:
+        #file's just modified
+        pass
     elif pathname in staged['D']:
         printColor("[DEV ERROR][resolveModifiedStaging] File should not appear as modified if staged as deleted", "red")
     else:
         printColor("[DEV ERROR][resolveModifiedStaging] File should not appear as M if not in index or deleted or smth!", "red")
-    pass
 
 def resetStagingAreaAndIndex(ignoreDirs):
     dumpResource("staged", {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}})
@@ -287,18 +304,27 @@ def resetStagingAreaAndIndex(ignoreDirs):
      #14.4 looks good
 def populateDifferences(dir, index, staged, differences):
     #check files different to index
-    for item in index:  #this makes sense, check for items in index if they are changed!
+    for item in index:
         if not os.path.exists(item): 
             if item not in staged['D']:
-                statDict=index[item]
-                del statDict["hash"]
-                differences['D'].update({item: statDict})
+                addToDelete=True
+                for renamedFile in staged['R']:
+                    if item in staged['R'][renamedFile]:
+                        addToDelete=False
+                for copiedFile in staged['C']:
+                    if item in staged['C'][copiedFile]:
+                        addToDelete=False
+                if addToDelete :
+                    statDict=index[item]
+                    del statDict["hash"]
+                    differences['D'].update({item: statDict})
             continue
         mode = os.lstat(item)
         itemData=index[item]
         del itemData['hash']
         if itemData!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
-            differences['M'].update({item: statDictionary(mode)})
+            if item not in staged["M"]:
+                differences['M'].update({item: statDictionary(mode)})
     #check files different to staging area
     for item in staged['A']:
         if not os.path.exists(item):
@@ -320,19 +346,31 @@ def populateDifferences(dir, index, staged, differences):
             differences['A'].update({item: statDictionary(mode)})
     for item in staged['C']:
         if not os.path.exists(item):
-            differences['D'].update({item: staged['C'][item]})
+            differences['D'].update({item: staged['C'][item][1]})
             continue
+        mode = os.lstat(item)
+        if statDictionary(mode) != staged['C'][item][1]:
+            differences['M'].update({item: statDictionary(mode)})
     for item in staged['R']:
         if not os.path.exists(item):
-            differences['D'].update({item: staged['R'][item]})
-            continue
+            differences['D'].update({item: staged['R'][item][1]})
+            continue    
+        mode = os.lstat(item)
+        if statDictionary(mode) != staged['R'][item][1]:
+            differences['M'].update({item: statDictionary(mode)})
     for item in staged['T']:
         if not os.path.exists(item):
-            differences['D'].update({item: staged['T'][item]})
+            differences['D'].update({item: staged['T'][item]}) 
+        mode = os.lstat(item)
+        if statDictionary(mode) != staged['T'][item]:
+            differences['M'].update({item: statDictionary(mode)})
     for item in staged['X']:
         if not os.path.exists(item):
             differences['D'].update({item: staged['X'][item]})
-    #check mostly for new files
+        mode = os.lstat(item)
+        if statDictionary(mode) != staged['X'][item][1]:
+            differences['M'].update({item: statDictionary(mode)})
+    #check for new files
     findNewFiles(dir, index, staged, differences)
     return differences
 
@@ -358,6 +396,10 @@ def findNewFiles(dir, index, staged, differences):
 def generateStatus(args, quiet=True):
     compareToIndex()
     if not quiet:
+        head = getResource("HEAD")
+        if head['hash']=='':
+            printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
+        printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")
         outputStaged=False
         outputStaged=printStaged()
         outputUnstaged=False
@@ -378,7 +420,7 @@ def stageFiles(paths):
             del unstaged['A'][pathname]
         elif pathname in unstaged['D']:
             if pathname in index:
-                statDict=index[pathname]
+                statDict=dict(index[pathname])
                 del statDict["hash"]
                 staged['D'][pathname]=statDict
             else:
@@ -398,14 +440,25 @@ def stageFiles(paths):
 
 def unstageFiles(paths):
     staged=getResource("staged")
-    for path in paths:
-        path=os.path.relpath(path, "")
-        if path in staged['A']:
-            del staged['A'][path]
-        if path in staged['D']:
-            del staged['D'][path]
-        if path in staged['M']:
-            del staged['M'][path]
+    for pathname in paths:
+        pathname=os.path.relpath(pathname, "")
+        if pathname in staged['A']:
+            del staged['A'][pathname]
+        elif pathname in staged['D']:
+            del staged['D'][pathname]
+        elif pathname in staged['M']:
+            del staged['M'][pathname]
+        elif pathname in staged['C']:
+            del staged['C'][pathname]
+        elif pathname in staged['R']:
+            del staged['R'][pathname]
+        elif pathname in staged['T']:
+            del staged['T'][pathname]
+        elif pathname in staged['X']:
+            del staged['X'][pathname]
+        else:
+            printColor("Cannot remove file '{}' from staging area".format(pathname), "red")
+            printColor("Make sure the file is staged!", "red")
 
     dumpResource("staged", staged)
 
@@ -436,8 +489,3 @@ def cacheFile(pathname):
     with open(pathname, 'r') as fileToCache:
         fileContent=fileToCache.read()
     safeWrite(os.path.join('.cookie', 'cache', pathname), fileContent)
-
-
-def printCommitData():
-    #call from CurseLib.py
-    pass

@@ -32,3 +32,4 @@ class Commit(Object):
 
     def getMetaData(self):
         return ('C?{}?A?{}?{}?{}?{}'.format('?'.join(self.parents),self.author, self.message, self.time, self.snapshot)).encode('utf-8')
+    
