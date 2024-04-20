@@ -34,10 +34,13 @@ def getHash(path): #only Blob but not really an useful method
     blobContent='?'.join(['B', path, fileContent])
     return sha1(blobContent.encode(encoding='utf-8'))
 
-def createBlob(path):
+def createBlob(path, forcePath=None):
     with open(path, 'r') as fp:
         fileContent=fp.read()
-    metaData='?'.join(['B', path, fileContent])
+    if forcePath:
+        metaData='?'.join(['B', forcePath, fileContent])
+    else:
+        metaData='?'.join(['B', path, fileContent])
     return Blob(metaData)
 
 def getObjectType(hash, objectsPath):

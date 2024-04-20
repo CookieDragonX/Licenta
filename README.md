@@ -19,9 +19,9 @@ TO DO:
 
 - implement log -- curses
 
-- handle moved as a different type of rename only in prints
+- queue for push command after implementing remote repo
 
-- concurrency for push command after implementing remote repo
+- don't allow branch creation until first commit 
 
 ---- LOW PRIO ----
 

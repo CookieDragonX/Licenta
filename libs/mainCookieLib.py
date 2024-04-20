@@ -9,7 +9,7 @@ from libs.RemotingManager import editLoginFile
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
-from libs.LogsManager import printCommitData
+from libs.LogsManager import printCommitData, test
 from libs.UndoLib import undoCommand
 
 
@@ -114,10 +114,29 @@ argsp.add_argument("-b",
                    help="Branch name to create.")
 
 #Undo subcommand definition
-argsp = argsubparsers.add_parser("log", help="Print commit data.")
+argsp = argsubparsers.add_parser("merge", help="Merge Commits or branches.")
+argsp.add_argument("-s",
+                   "--source",
+                   metavar="source",
+                   nargs="?",
+                   required=True,
+                   help="Source content(s) for merge.")
+
+argsp.add_argument("-t",
+                   "--target",
+                   metavar="target",
+                   nargs=1,
+                   default=None,
+                   required=False,
+                   help="Target branch or commit upon which to perform merge.")
 
 #Undo subcommand definition
-argsp = argsubparsers.add_parser("undo", help="Undo a command")
+argsp = argsubparsers.add_parser("log", help="Print commit data.")
+
+
+
+#Undo subcommand definition
+argsp = argsubparsers.add_parser("undo", help="Undo a command.")
 argsp.add_argument("index",
                    metavar="index",
                    nargs="?",
@@ -151,6 +170,8 @@ def main(argv=sys.argv[1:]):
         undo(args)
     elif args.command == 'log':
         log(args)
+    elif args.command == 'merge':
+        merge(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -258,8 +279,14 @@ def login(args):
 
 @cookieRepoCertified
 def log(args):
-    head=getResource("HEAD")
-    printCommitData(head["hash"])
+    #head=getResource("HEAD")
+    #printCommitData(head["hash"])
+    test()
+
+@addToUndoCache()
+@cookieRepoCertified
+def merge(args):
+    pass
 
 @cookieRepoCertified
 def undo(args):

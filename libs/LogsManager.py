@@ -5,18 +5,22 @@ import os
 from utils.prettyPrintLib import printColor
 from time import ctime
 from libs.BasicUtils import getResource, dumpResource
-
+from libs.MergeLib import getMergeBase
 
 def logCommit(commitObject):
     logs=getResource("logs")
     commitHash=commitObject.getHash()
     edgesFromCommit=[]
-    for parent in commitObject.parents:
-        logs["edge_index"]+=1
-        logs["edges"][logs["edge_index"]] = {"from": commitHash, "to": parent}
-        edgesFromCommit.append(logs["edge_index"])
+    parent = commitObject.parents[0]
+    logs["edge_index"]+=1
+    logs["edges"][logs["edge_index"]] = {"from": commitHash, "to": parent}
+    edgesFromCommit.append(logs["edge_index"])
     logs["adj"][commitHash]=edgesFromCommit
-    logs["nodes"].append(commitHash)
+    if parent == "None":
+        depth=1
+    else:
+        depth=int(logs["nodes"][parent])+1
+    logs["nodes"][commitHash]=depth
     dumpResource("logs", logs)
 
 def printCommitData(hash):
@@ -30,11 +34,12 @@ def printCommitData(hash):
     printColor("  Snapshot     : {}".format(commit.snapshot), "white")
     printColor("---------------------------------------------------------------------", "white")
 
-def getAncestors(hash, acc, logs):
-    acc.append(hash)
-    for edge in logs["adj"][hash]:
-        getAncestors(logs[str(edge)]["to"], acc, logs)
-    
+def test():
+    head=getResource("HEAD")
+
+    base = getMergeBase("7149b661d1cc8a1560d136a90b5e2d4edf2a0b2a", "0b3e37dcb649d28478ed6e3df960d44e58984d0c")
+    print(base)
+
 
 # @wrapper
 # def logCommits(stdscr, hash):

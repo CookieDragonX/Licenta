@@ -2,66 +2,75 @@ import sys
 import os
 from libs.objectLib.ObjectManager import store, load, getObjectType
 from libs.objectLib.Commit import Commit
+from libs.objectLib.Tree import Tree
 from libs.objectLib.Blob import Blob
-from libs.IndexManager import generateStatus
 from libs.BranchingManager import getSnapshotFromCommit
 from libs.BasicUtils import getResource
 from utils.prettyPrintLib import printColor
+from utils.stringMerge import merge
 from time import time
+from three_merge import merge 
 
-def mergeBlobs(common, target, source, objectsPath): #the args are hashes
-    commonBlob=load(target, objectsPath)
+
+def mergeBlobs(target, source, base, objectsPath): #the args are hashes
+    if base != None:
+        baseBlob = load(base, objectsPath)
+    else:
+        baseBlob = None
     targetBlob=load(target, objectsPath)
     sourceBlob=load(source, objectsPath)
     metaData=["B"]
-    #get diffs common-target and source-target
-    # perform 3 way merge soOmehow https://www.geeksforgeeks.org/3-way-merge-sort/
-    # this is way easier, difflib the 2 contents, parse result create new blob, ask to solve conflict if there is conflict
-    # if that sounds good at that point too, here's sample, ly
-            # import difflib
-
-            # with open('file1.txt','r') as f1, open('file2.txt','r') as f2:
-            #     for line in difflib.unified_diff(f1.read(), f2.read(), fromfile='file1', tofile='file2', lineterm=''):
-            #         print(line)
+    if targetBlob.filename != sourceBlob.filename:
+        printColor("[DEV ERROR][mergeBlobs] target and source filenames are different?", "red")
+    else:
+        filename=targetBlob.filename
+    metaData.append(filename)
+    if baseBlob!=None:
+        mergedContent=merge(sourceBlob.content, targetBlob.content, baseBlob.content)
+    else:
+        mergedContent=merge(sourceBlob.content, targetBlob.content, "")
+    metaData.append(mergedContent)
     store(Blob('?'.join(metaData)), objectsPath)
-    pass
 
-def findCommonAncestor(sha1, sha2, objectsPath):
-    sha1Tree=load(sha1, objectsPath)
-    sha2Tree=load(sha2, objectsPath)
-    if sha1Tree.__class__!= "Tree" or sha2Tree.__class__!= "Tree":
-        printColor("[DEV ERROR][findCommonAncestor] Received a hash that is not a tree!", "red")
-    commonAncestorNotFound=True
-    
-    #get data from log YOYOOYOY FOR BOTH LISTS AT ONCE, MEMBER ANCESTORS AND CHECK ONLY NEW STUFF!!!!
-
-def mergeTrees(target, source, objectsPath): # the args are hashes
+def mergeTrees(target, source, base, objectsPath): # the args are hashes
     targetTree=load(target, objectsPath)
     sourceTree=load(source, objectsPath)
-    if targetTree.__class__!= "Tree" or sourceTree.__class__!= "Tree":
+    if base != None:
+        baseTree=load(base, objectsPath)
+    else:
+        baseTree=Tree(None)
+    if targetTree.__class__!= "Tree" or sourceTree.__class__!= "Tree" or baseTree.__class__!= "Tree":
         printColor("[DEV ERROR][mergeTrees] Received a hash that is not a tree!", "red")
-    newTree=load(target, objectsPath)
+    
     for item in targetTree.map:
         try:
             if targetTree.map[item] != sourceTree.map[item]:
                 if (getObjectType(targetTree.map[item])=='B'): #conflict case
-                    newTree.map[item]=mergeBlobs(targetTree.map[item], sourceTree.map[item])
+                    if item in baseTree.map:
+                        baseTree.map[item]=mergeBlobs(targetTree.map[item], sourceTree.map[item], baseTree.map[item], objectsPath)
+                    else:
+                        baseTree.map[item]=mergeBlobs(targetTree.map[item], sourceTree.map[item], None, objectsPath)
                 else:
-                    newTree.map[item]=mergeTrees(targetTree.map[item], sourceTree.map[item], objectsPath)
+                    if item in baseTree.map:
+                        baseTree.map[item]=mergeTrees(targetTree.map[item], sourceTree.map[item], baseTree.map[item],  objectsPath)
+                    else:
+                        baseTree.map[item]=mergeTrees(targetTree.map[item], sourceTree.map[item], None,  objectsPath)
+
             else:
-                newTree.map[item]=targetTree.map[item]
+                baseTree.map[item]=targetTree.map[item]
         except KeyError:
             # targetTree has file that source tree doesn't, thus sourceTree.map[item] cannot be accessed, continuing...
             # we wish for newTree to not contain this item since it was deleted in sourceTree so we pop it!
             # would make sense i think
             # think about this 16.4
-            del newTree.map[item]
+            del baseTree.map[item]
             continue
-    store(newTree, objectsPath)
-    return newTree.getHash()
+    store(baseTree, objectsPath)
+    return baseTree.getHash()
 
-def createMergeCommit(target, source, objectsPath, DEBUG=False):
-    generateStatus(None,quiet=True)
+def createMergeCommit(target, source, DEBUG=False):
+    objectsPath = os.path.join(".cookie", "objects")
+    #generateStatus(None,quiet=True)
     metaData=['C']
     refs=getResource("refs")
     if target in refs["B"]:
@@ -90,5 +99,25 @@ def createMergeCommit(target, source, objectsPath, DEBUG=False):
             metaData.append(userdata['user'])
     metaData.append("Merge into {} from {}".format(target, source))
     metaData.append(str(time()))
-    metaData.append(mergeTrees(targetSha, sourceSha))
+    baseSha = getSnapshotFromCommit(getMergeBase(targetSha, sourceSha))
+    metaData.append(mergeTrees(targetSha, sourceSha, baseSha, objectsPath))
     store(Commit('?'.join(metaData)), objectsPath)
+
+
+def getMergeBase(target, source):
+    logs = getResource("logs")
+    return findLCA([target],[source], logs)
+
+def findLCA(a, b, graph):
+    while a[-1] != b[-1]:
+        if graph['nodes'][a[-1]] >= graph['nodes'][b[-1]]:
+            if len(graph['adj'][a[-1]])==1:
+                a.append(graph['edges'][str(graph['adj'][a[-1]][0])]['to'])
+            else:
+                a.append(findLCA(graph['edges'][str(graph['adj'][a[-1]][0])]['to'], graph['edges'][str(graph['adj'][a[-1]][1])]['to']))
+        else:
+            if len(graph['adj'][b[-1]])==1:
+                b.append(graph['edges'][str(graph['adj'][b[-1]][0])]['to'])
+            else:
+                b.append(findLCA(graph['edges'][str(graph['adj'][b[-1]][0])]['to'], graph['edges'][str(graph['adj'][b[-1]][1])]['to']))
+    return a[-1]

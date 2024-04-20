@@ -64,7 +64,7 @@ def createDirectoryStructure(args):
         safeWrite(os.path.join(project_dir, "userdata"), {"user":"","email":""}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "history"), {"index":0,"commands":{}}, jsonDump=True)
-        safeWrite(os.path.join(project_dir, "logs"), {"adj":{}, "nodes":[], "edges":{}, "edge_index":0}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "logs"), {"adj":{}, "nodes":{}, "edges":{}, "edge_index":0}, jsonDump=True)
     except OSError as e:
         print(e.__traceback__)
         printColor("Already a cookie repository at {}".format(project_dir),'red')
@@ -99,8 +99,15 @@ def printStaged():
             printColor("-->Files copied:",'green')
             print(*["   {} <-- {}".format(file, staged['C'][file][0]) for file in staged['C']], sep=os.linesep)
         if staged['R']!={}:
-            printColor("-->Files renamed:",'green')
-            print(*["   {} --> {}".format(staged['R'][file][0], file) for file in staged['R']], sep=os.linesep)
+            moved=dict()
+            for item in staged['R']:
+                if os.path.basename(item)==os.path.basename(staged['R'][item][0]):
+                    moved[item]=staged['R'][item]
+            printColor("-->Files moved:",'green')
+            print(*["   {} --> {}".format(moved[file][0], file) for file in moved], sep=os.linesep)
+            if len(moved[item]) < len(staged['R']):
+                printColor("-->Files renamed:",'green')
+                print(*["   {} --> {}".format(staged['R'][file][0], file) if file not in moved else "" for file in staged['R']], sep=os.linesep)
         if staged['T']!={}:
             printColor("-->Files with type changes:",'green')
             print(*["   {}".format(file) for file in staged['T']], sep=os.linesep)
@@ -129,3 +136,13 @@ def printUnstaged():
         printColor("-----------------------------------------------------------------", "white")
         return True
     return False
+
+def commonListElements(a, b):    
+    a_set = set(a)
+    b_set = set(b)
+     
+    # check length 
+    if len(a_set.intersection(b_set)) > 0:
+        return a_set.intersection(b_set)
+    else:
+        return None

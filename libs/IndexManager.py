@@ -114,7 +114,7 @@ def generateSnapshot(targetDirs, ignoreDirs):
 def addFileToIndex(pathname):
     index=getResource("index")
     mode = os.lstat(pathname)
-    blob = createBlob(os.path.join('.cookie', 'cache', pathname))
+    blob = createBlob(os.path.join('.cookie', 'cache', pathname), forcePath=pathname)
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
@@ -166,7 +166,7 @@ def resolveAddedStaging(pathname, staged, index):
             with open(pathname, "r") as newFile:
                 newFileContent=newFile.read()
             if newFileContent==oldObject.content:
-                # File renamed, delete stuff from where it was and add to 'R'
+                # File renamed, delete stuff from where it was and add to 'C'
                 del staged['A'][pathname]
                 staged['C'][pathname]=[]
                 staged['C'][pathname].append(item)
@@ -396,6 +396,10 @@ def findNewFiles(dir, index, staged, differences):
 def generateStatus(args, quiet=True):
     compareToIndex()
     if not quiet:
+        head = getResource("HEAD")
+        if head['hash']=='':
+            printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
+        printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")
         outputStaged=False
         outputStaged=printStaged()
         outputUnstaged=False
