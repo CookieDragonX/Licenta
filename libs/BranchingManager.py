@@ -7,6 +7,10 @@ from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 
 def checkoutSnapshot(args):
+    head=getResource("HEAD")
+    if head["name"] == args.ref:
+        printColor("Already on branch {}!".format(head["name"]), "blue")
+        sys.exit(1)
     new_head='DETACHED'
     objectsPath = os.path.join('.cookie', 'objects')
     if args.ref == None:
@@ -22,7 +26,7 @@ def checkoutSnapshot(args):
         if objType != 'C':
             printColor("[DEV ERROR][checkoutSnapshot] That's not the hash of a commit, where did you get that?", "red") 
             sys.exit(1)                                                                             #there's improvement to be done here
-        snapshot=getSnapshotFromCommit(args.ref, objectsPath)                                                    #get snapshot and raise notACommitError
+        snapshot=getSnapshotFromCommit(args.ref, objectsPath)                                       #get snapshot and raise notACommitError
         commitHash=args.ref
     else:
         try:
@@ -47,7 +51,11 @@ def resetToSnapshot(hash, action='reset'):
     updateTree(tree, index, objectsPath, action)
     dumpResource("index", index)
 
-def updateTree(tree,  index, objectsPath, action='reset'):
+def updateTree(tree, index, objectsPath, action='reset'):
+    if tree.__class__.__name__!='Tree':
+        printColor("[DEV ERROR][updateTree] Method received object that is not tree: {}".format(tree.__class__.__name__), "red")
+        printColor("hash: {}".format(tree.getHash()),"red")
+        sys.exit(1)
     for path, hash in tree.map.items():
         if action=='reset':
             object=load(hash, objectsPath)
@@ -72,13 +80,15 @@ def updateHead(newHead, currentRef=True, ref=None):
     if not currentRef:
         head["hash"]=ref
     dumpResource("HEAD", head)
-    if not currentRef:
-        resetToSnapshot(ref)
 
 def createBranch(branchName, currentRef=True, ref=None):
+    head=getResource("HEAD")
+    if head["hash"]=="":
+        printColor("Please commit something before creating branches!", "red")
+        printColor("Merging won't be possible if branches start from different commits!", "red")
+        sys.exit(1)
     try:
         if currentRef:
-            head=getResource("HEAD")
             ref=head["hash"]
         if not currentRef :
             if ref==None:

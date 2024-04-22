@@ -9,9 +9,8 @@ from libs.RemotingManager import editLoginFile
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
-from libs.LogsManager import printCommitData, test
 from libs.UndoLib import undoCommand
-
+from libs.MergeLib import mergeSourcesIntoTarget
 
 cookieWordArt='''
                                  __   .__        
@@ -115,20 +114,20 @@ argsp.add_argument("-b",
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("merge", help="Merge Commits or branches.")
-argsp.add_argument("-s",
-                   "--source",
-                   metavar="source",
-                   nargs="?",
-                   required=True,
-                   help="Source content(s) for merge.")
-
 argsp.add_argument("-t",
                    "--target",
                    metavar="target",
-                   nargs=1,
+                   nargs="?",
                    default=None,
                    required=False,
                    help="Target branch or commit upon which to perform merge.")
+argsp.add_argument("-s",
+                   "--source",
+                   metavar="source",
+                   nargs="+",
+                   required=True,
+                   help="Source content(s) for merge.")
+
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("log", help="Print commit data.")
@@ -281,12 +280,11 @@ def login(args):
 def log(args):
     #head=getResource("HEAD")
     #printCommitData(head["hash"])
-    test()
-
+    pass
 @addToUndoCache()
 @cookieRepoCertified
 def merge(args):
-    pass
+    mergeSourcesIntoTarget(args.target, args.source)
 
 @cookieRepoCertified
 def undo(args):
