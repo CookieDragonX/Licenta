@@ -10,7 +10,7 @@ from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageF
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
 from libs.UndoLib import undoCommand
-from libs.MergeLib import mergeSourcesIntoTarget
+from libs.MergeLib import mergeSourceIntoTarget
 
 cookieWordArt='''
                                  __   .__        
@@ -118,13 +118,12 @@ argsp.add_argument("-t",
                    "--target",
                    metavar="target",
                    nargs="?",
-                   default=None,
-                   required=False,
+                   required=True,
                    help="Target branch or commit upon which to perform merge.")
 argsp.add_argument("-s",
                    "--source",
                    metavar="source",
-                   nargs="+",
+                   nargs="?",
                    required=True,
                    help="Source content(s) for merge.")
 
@@ -205,7 +204,7 @@ def addToUndoCache(fct, saveResource=[]):
         index=history["index"]
         for resource_name in saveResource:
             resource=getResource(resource_name)
-            safeWrite(os.path.join(".cookie", "undo_cache", str(index+1), resource_name), resource, jsonDump=True)
+            safeWrite(os.path.join(".cookie", "cache", "undo_cache", str(index+1), resource_name), resource, jsonDump=True)
         rez=fct(*args, **kwargs)
         commandData=vars(args[0])
         if commandData["command"]=="delete":
@@ -284,7 +283,7 @@ def log(args):
 @addToUndoCache()
 @cookieRepoCertified
 def merge(args):
-    mergeSourcesIntoTarget(args.target, args.source)
+    mergeSourceIntoTarget(args.target, args.source)
 
 @cookieRepoCertified
 def undo(args):

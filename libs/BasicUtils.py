@@ -55,8 +55,9 @@ def createDirectoryStructure(args):
     try:
         os.makedirs(project_dir)
         os.mkdir(os.path.join(project_dir, "objects"))
-        os.makedirs(os.path.join(project_dir, "cache"))
-        os.makedirs(os.path.join(project_dir, "undo_cache"))
+        os.makedirs(os.path.join(project_dir, "cache",  "undo_cache"))
+        os.makedirs(os.path.join(project_dir, "cache",  "index_cache"))
+        os.makedirs(os.path.join(project_dir, "cache",  "merge_cache"))
         safeWrite(os.path.join(project_dir, "index"), {}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "staged"), {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "unstaged"), {"A":{},"D":{},"M":{}}, jsonDump=True)
@@ -136,13 +137,15 @@ def printUnstaged():
         printColor("-----------------------------------------------------------------", "white")
         return True
     return False
+    
+def cacheFile(pathname, cacheType='index', fileContent=None):
+    if not fileContent:
+        with open(pathname, 'r') as fileToCache:
+            fileContent=fileToCache.read()
 
-def commonListElements(a, b):    
-    a_set = set(a)
-    b_set = set(b)
-     
-    # check length 
-    if len(a_set.intersection(b_set)) > 0:
-        return a_set.intersection(b_set)
+    if cacheType not in ['undo', 'merge', 'index']:
+        printColor("[DEV ERROR][cacheFile] unknown cache type received '{}'!".format(cacheType), "red")
+        sys.exit(1)
     else:
-        return None
+        cacheTypeDir = "{}_cache".format(cacheType)
+    safeWrite(os.path.join('.cookie', 'cache', cacheTypeDir, pathname), fileContent)

@@ -120,7 +120,7 @@ def deleteBranch(branchName):
     if head["name"]==branchName:
         head["name"] = "DETACHED"
     del refs['B'][branchName]
-    undoCachePath=os.path.join(".cookie", "undo_cache", "branches")
+    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
     safeWrite(os.path.join(undoCachePath, branchName), undoInfo)
         

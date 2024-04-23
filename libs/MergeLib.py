@@ -5,13 +5,56 @@ from libs.objectLib.Commit import Commit
 from libs.objectLib.Tree import Tree
 from libs.objectLib.Blob import Blob
 from libs.BranchingManager import getSnapshotFromCommit, updateHead, resetToSnapshot
-from libs.BasicUtils import getResource, dumpResource
+from libs.BasicUtils import getResource, dumpResource, cacheFile
 from utils.prettyPrintLib import printColor
 from utils.stringMerge import merge
-from time import time
+from time import time, sleep
 from libs.LogsManager import logCommit
+import subprocess
+import shutil, psutil
 
-def mergeSourcesIntoTarget(target, sources):
+def _unidiff_output(target, source):
+    """
+    Helper function. Returns a string containing the unified diff of two multiline strings.
+    """
+    import difflib
+    target=target.splitlines(1)
+    source=source.splitlines(1)
+    diff=difflib.unified_diff(target, source, fromfile='target', tofile='source')
+    return ''.join(diff)
+
+def get_proc_status(pid):
+    #https://stackoverflow.com/questions/24803272/how-do-i-know-if-a-file-has-been-closed-if-i-open-it-using-subprocess-popen
+    """Get the status of the process which has the specified process id."""
+    proc_status = None
+    try:
+        proc_status = psutil.Process(pid).status()
+    except psutil.NoSuchProcess as no_proc_exc:
+        pass
+    except psutil.ZombieProcess as zombie_proc_exc:  
+        # For Python 3.0+ in Linux (and MacOS?).
+        pass
+    return proc_status
+
+def fileEditProcess(path):
+    if shutil.which("notepad"):
+        phandler = subprocess.Popen(["notepad", path])
+    elif "EDITOR" in os.environ:
+        phandler = subprocess.Popen([os.environ["EDITOR"], path])
+    pid = phandler.pid
+    pstatus = get_proc_status(pid)
+    printColor("Currently editting file '{}'...".format(os.path.basename(path)), "green")
+    printColor("Save and close oppened file to continue!", "green")
+    while pstatus is not None and pstatus != "zombie":
+        sleep(1)
+        pstatus = get_proc_status(pid)
+
+    if os.name == 'posix' and pstatus == "zombie":   # Handle zombie processes in Linux (and MacOS?).
+        print("subprocess %s, near-final process status: %s." % (pid, pstatus))
+        phandler.communicate()
+    pstatus = get_proc_status(pid)
+
+def mergeSourceIntoTarget(target, sources):
     if target == None:
         target = getResource("HEAD")["name"]
     createMergeCommit(target, sources)
@@ -31,18 +74,48 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
         if not filename:
             filename=sourceBlob.filename
     if base != None:
-        baseBlob = None
+        baseBlob = Blob(None)
     else:
         baseBlob = load(base, objectsPath)
     
     metaData=["B"]
     metaData.append(filename)
 
-    if baseBlob!=None:
-        mergedContent=merge(sourceBlob.content, targetBlob.content, baseBlob.content)
-    else:
-        mergedContent=merge(sourceBlob.content, targetBlob.content, "")
-    metaData.append(mergedContent)
+    mergedContent, hasConflict = merge(sourceBlob.content, targetBlob.content, baseBlob.content)
+
+    if hasConflict:
+        printColor("Found conflict in file '{}'.".format(filename), "red")
+        opt = None
+        while opt not in ['t', 's', 'm', 'q']:
+            print("========================================================================")
+            print     (" <> Options:")
+            printColor("    [h] --> Show conflicting content.", "blue")
+            print     ("    [t] --> Choose content of merge target.")
+            print     ("    [s] --> Choose content of merge source.")
+            print     ("    [m] --> Manual conflict resolution.")
+            printColor("    [q] --> Quit merging...", "red")
+            print("========================================================================")
+            opt = input("Please provide an option: ").lower()
+            if opt not in ['t', 's', 'm', 'q']:
+                printColor("Please choose a valid option!", "red")
+            if opt == 'h':
+                print(_unidiff_output(sourceBlob.content, targetBlob.content))
+        if opt == 'q':
+            printColor(" <> Aborting merge...", "red", "red")
+            sys.exit(1)
+        elif opt == 't':
+            printColor(" <> '{}' file receives target content...".format(filename), "blue")
+            mergedContent = targetBlob.content
+        elif opt == 's':
+            printColor(" <> '{}' file receives source content...".format(filename), "blue")
+            mergedContent = sourceBlob.content
+        elif opt == 'm':
+            printColor("Resolving conflict for '{}'...".format(filename), "blue")
+            cacheFile(filename, cacheType="merge", fileContent=mergedContent)
+            fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
+            with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r") as editedContent:
+                mergedContent=editedContent.read()
+    metaData.append(mergedContent) 
     newBlob = Blob('?'.join(metaData))
     store(newBlob, objectsPath)
     return newBlob.getHash()
@@ -132,7 +205,8 @@ def mergeTrees(target, source, base, objectsPath): # the args are hashes
     store(targetTree, objectsPath)
     return targetTree.getHash()
 
-def createMergeCommit(target, sources):
+def createMergeCommit(target, source):
+    #check equality of target and source <TO DO>
     objectsPath = os.path.join(".cookie", "objects")
     #generateStatus(None,quiet=True)
     metaData=['C']
@@ -153,40 +227,75 @@ def createMergeCommit(target, sources):
 
     if getObjectType(targetSha, objectsPath) != 'C':
         printColor("Cannot merge into {} -- not a branch name or commit.".format(target), "red")
-    metaData.append(targetSha)
-    for source in sources:
-        if source in refs["B"]:
-            sourceSha=refs["B"][source]
-        else:
-            sourceSha=source
-        sourceTreeSha=getSnapshotFromCommit(refs["B"][source], objectsPath)
-        if getObjectType(sourceSha, objectsPath) != 'C':
-            printColor("Cannot merge from {} -- not a commit or a branch name".format(target), "red")
+
+    if source in refs["B"]:
+        sourceSha=refs["B"][source]
+    else:
+        sourceSha=source
+    sourceTreeSha=getSnapshotFromCommit(refs["B"][source], objectsPath)
+    if getObjectType(sourceSha, objectsPath) != 'C':
+        printColor("Cannot merge from '{}' -- not a commit or a branch name".format(target), "red")
+    mergeBase=getMergeBase(targetSha, sourceSha)
+
+    if mergeBase == targetSha:
+        opt=None
+        while opt not in ['y', 'n', 'yes', 'no']:
+            print("====================================================================")
+            print(" <> Do you wish to update branch '{}' with new content? (y/n)".format(target))
+            print("====================================================================")
+            opt = input("Please provide an option: ").lower()
+            if opt not in ['y', 'n', 'yes', 'no']:
+                printColor("Please provide a valid option!", "red")
+        if opt in ['y', 'yes']:
+            if targetIsBranchName:
+                refs[target] = sourceSha
+                if targetIsHead:
+                    updateHead(target, currentRef=False, ref=sourceSha)
+                    resetToSnapshot(sourceTreeSha)
+                dumpResource("refs", refs)
+                printColor("Successfully merged changes to branch '{}'.".format(target), "green")
+            else :
+                pass
+                #TO DO: what do we do if merge target is a commit hash? ignore?
+                # depends if we commit all objects on push or just branch relevant ones!
+                # i think we ignore? 23.4
+    else:
+        metaData.append(targetSha)
         metaData.append(sourceSha)
-        baseTreeSha = getSnapshotFromCommit(getMergeBase(targetSha, sourceSha), objectsPath)
+        baseTreeSha = getSnapshotFromCommit(mergeBase, objectsPath)
         targetTreeSha = mergeTrees(targetTreeSha, sourceTreeSha, baseTreeSha, objectsPath)
         
-    metaData.append('A')
-    userdata=getResource("userdata")    
-    if userdata['user'] == "":
-        printColor("Please login with a valid e-mail first!",'red')
-        printColor("Use 'cookie login'",'white')
-        sys.exit(0)
-    else:
-        metaData.append(userdata['user'])
-        
-    metaData.append("Merge into {} from {}".format(target, "; ".join(sources)))
-    metaData.append(str(time()))
-    metaData.append(targetTreeSha)
-    newCommit = Commit('?'.join(metaData))
-    store(newCommit, objectsPath)
-    logCommit(newCommit)
-    if targetIsBranchName:
-        refs[target] = newCommit.getHash()
-        if targetIsHead:
-            updateHead(target, currentRef=False, ref=newCommit.getHash())
-            resetToSnapshot(newCommit.snapshot)
-    dumpResource("refs", refs)
+        metaData.append('A')
+        userdata=getResource("userdata")    
+        if userdata['user'] == "":
+            printColor("Please login with a valid e-mail first!",'red')
+            printColor("Use 'cookie login'",'white')
+            sys.exit(0)
+        else:
+            metaData.append(userdata['user'])
+            
+        metaData.append("Merge into '{}' from '{}'".format(target, source))
+        metaData.append(str(time()))
+        metaData.append(targetTreeSha)
+        newCommit = Commit('?'.join(metaData))
+        opt=None
+        while opt not in ['y', 'n', 'yes', 'no']:
+            print("========================================================================")
+            print(" <> Do you wish to commit merged content to branch '{}'? (y/n)".format(target))
+            print("========================================================================")
+            opt = input("Please provide an option: ").lower()
+            if opt not in ['y', 'n', 'yes', 'no']:
+                printColor("Please provide a valid option!", "red")
+        if opt in ['y', 'yes']:
+            store(newCommit, objectsPath)
+            logCommit(newCommit)
+            if targetIsBranchName:
+                refs[target] = newCommit.getHash()
+                if targetIsHead:
+                    updateHead(target, currentRef=False, ref=newCommit.getHash())
+                    resetToSnapshot(newCommit.snapshot)
+            dumpResource("refs", refs)
+            printColor("Successfully committed merge to branch '{}'.".format(target), "green")
 
 
 def getMergeBase(target, source):
@@ -206,3 +315,5 @@ def findLCA(a, b, graph):
             else:
                 b.append(findLCA(graph['edges'][str(graph['adj'][b[-1]][0])]['to'], graph['edges'][str(graph['adj'][b[-1]][1])]['to']))
     return a[-1]
+
+
