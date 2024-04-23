@@ -9,9 +9,8 @@ from libs.RemotingManager import editLoginFile
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
-from libs.LogsManager import printCommitData, test
 from libs.UndoLib import undoCommand
-
+from libs.MergeLib import mergeSourceIntoTarget
 
 cookieWordArt='''
                                  __   .__        
@@ -115,6 +114,12 @@ argsp.add_argument("-b",
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("merge", help="Merge Commits or branches.")
+argsp.add_argument("-t",
+                   "--target",
+                   metavar="target",
+                   nargs="?",
+                   required=True,
+                   help="Target branch or commit upon which to perform merge.")
 argsp.add_argument("-s",
                    "--source",
                    metavar="source",
@@ -122,13 +127,6 @@ argsp.add_argument("-s",
                    required=True,
                    help="Source content(s) for merge.")
 
-argsp.add_argument("-t",
-                   "--target",
-                   metavar="target",
-                   nargs=1,
-                   default=None,
-                   required=False,
-                   help="Target branch or commit upon which to perform merge.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("log", help="Print commit data.")
@@ -206,7 +204,7 @@ def addToUndoCache(fct, saveResource=[]):
         index=history["index"]
         for resource_name in saveResource:
             resource=getResource(resource_name)
-            safeWrite(os.path.join(".cookie", "undo_cache", str(index+1), resource_name), resource, jsonDump=True)
+            safeWrite(os.path.join(".cookie", "cache", "undo_cache", str(index+1), resource_name), resource, jsonDump=True)
         rez=fct(*args, **kwargs)
         commandData=vars(args[0])
         if commandData["command"]=="delete":
@@ -281,12 +279,11 @@ def login(args):
 def log(args):
     #head=getResource("HEAD")
     #printCommitData(head["hash"])
-    test()
-
+    pass
 @addToUndoCache()
 @cookieRepoCertified
 def merge(args):
-    pass
+    mergeSourceIntoTarget(args.target, args.source)
 
 @cookieRepoCertified
 def undo(args):

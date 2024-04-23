@@ -21,8 +21,6 @@ TO DO:
 
 - queue for push command after implementing remote repo
 
-- don't allow branch creation until first commit 
-
 ---- LOW PRIO ----
 
 - everything is top prio!

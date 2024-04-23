@@ -6,7 +6,7 @@ from libs.objectLib.Commit import Commit
 from utils.prettyPrintLib import printColor
 from time import time
 from libs.BranchingManager import updateBranchSnapshot
-from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, safeWrite
+from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, cacheFile
 from libs.LogsManager import logCommit
 from copy import deepcopy
 
@@ -114,7 +114,7 @@ def generateSnapshot(targetDirs, ignoreDirs):
 def addFileToIndex(pathname):
     index=getResource("index")
     mode = os.lstat(pathname)
-    blob = createBlob(os.path.join('.cookie', 'cache', pathname), forcePath=pathname)
+    blob = createBlob(os.path.join('.cookie', 'cache', "index_cache", pathname), forcePath=pathname)
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
@@ -485,7 +485,3 @@ def isThereStagedStuff():
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
 
-def cacheFile(pathname):
-    with open(pathname, 'r') as fileToCache:
-        fileContent=fileToCache.read()
-    safeWrite(os.path.join('.cookie', 'cache', pathname), fileContent)

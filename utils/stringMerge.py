@@ -16,7 +16,8 @@ DELETION = -1
 ADDITION = 1
 
 
-def merge(source: str, target: str, base: str) -> str:
+def merge(source: str, target: str, base: str) -> tuple[str, bool]:
+    has_conflict = False
     diff1_l = DIFFER.diff_main(base, source)
     diff2_l = DIFFER.diff_main(base, target)
 
@@ -149,6 +150,7 @@ def merge(source: str, target: str, base: str) -> str:
             composed_text.append('<<<<<<< ++ {0} '.format(target_text))
             composed_text.append('======= -- {0} '.format(source_text))
             composed_text.append('>>>>>>>')
+            has_conflict = True
             source = next(diff1, None)
             target = next(diff2, None)
             if target is not None:
@@ -161,6 +163,7 @@ def merge(source: str, target: str, base: str) -> str:
             composed_text.append('<<<<<<< ++ {0} '.format(source_text))
             composed_text.append('======= -- {0} '.format(target_text))
             composed_text.append('>>>>>>>')
+            has_conflict = True
             source = next(diff1, None)
             target = next(diff2, None)
             if source is not None:
@@ -178,6 +181,7 @@ def merge(source: str, target: str, base: str) -> str:
                     composed_text.append('<<<<<<< ++ {0} '.format(source_text))
                     composed_text.append('======= ++ {0} '.format(target_text))
                     composed_text.append('>>>>>>>')
+                    has_conflict = True
             else:
                 if target_text.startswith(source_text):
                     composed_text.append(target_text)
@@ -186,6 +190,7 @@ def merge(source: str, target: str, base: str) -> str:
                     composed_text.append('<<<<<<< ++ {0} '.format(source_text))
                     composed_text.append('======= ++ {0} '.format(target_text))
                     composed_text.append('>>>>>>>')
+                    has_conflict = True
             source = next(diff1, None)
             target = next(diff2, None)
         elif source_status == DELETION and target_status == DELETION:
@@ -217,6 +222,7 @@ def merge(source: str, target: str, base: str) -> str:
                 composed_text.append('<<<<<<< -- {0} '.format(source_text))
                 composed_text.append('======= -- {0} '.format(target_text))
                 composed_text.append('>>>>>>>')
+                has_conflict = True
 
     while source is not None:
         source_status, source_text = source
@@ -234,4 +240,4 @@ def merge(source: str, target: str, base: str) -> str:
             composed_text.append(target_text)
         target = next(diff2, None)
 
-    return ''.join(composed_text)
+    return (''.join(composed_text), has_conflict)

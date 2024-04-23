@@ -5,7 +5,6 @@ import os
 from utils.prettyPrintLib import printColor
 from time import ctime
 from libs.BasicUtils import getResource, dumpResource
-from libs.MergeLib import getMergeBase
 
 def logCommit(commitObject):
     logs=getResource("logs")
@@ -34,11 +33,6 @@ def printCommitData(hash):
     printColor("  Snapshot     : {}".format(commit.snapshot), "white")
     printColor("---------------------------------------------------------------------", "white")
 
-def test():
-    head=getResource("HEAD")
-
-    base = getMergeBase("7149b661d1cc8a1560d136a90b5e2d4edf2a0b2a", "0b3e37dcb649d28478ed6e3df960d44e58984d0c")
-    print(base)
 
 
 # @wrapper

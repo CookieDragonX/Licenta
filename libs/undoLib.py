@@ -8,9 +8,9 @@ import shutil
 
 
 def restoreResource(index, resource_name):
-    oldResource = getResource(resource_name, specificPath=os.path.join(".cookie", "undo_cache", str(index)))
+    oldResource = getResource(resource_name, specificPath=os.path.join(".cookie", "cache", "undo_cache", str(index)))
     dumpResource(resource_name, oldResource)
-    shutil.rmtree(os.path.join(".cookie", "undo_cache", str(index)))
+    shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
 
 def undoCommand(args):
     history=getResource("history")
@@ -64,7 +64,7 @@ def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
 
 def undo_delete_branch(args,indexToUndo):
-    undoCachePath=os.path.join(".cookie", "undo_cache", "branches")
+    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
     with open(os.path.join(undoCachePath, args["branch"]), "r") as deletedBranchFile:
         sha=deletedBranchFile.read().strip()
