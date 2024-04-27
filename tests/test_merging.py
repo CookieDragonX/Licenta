@@ -53,5 +53,5 @@ def test_merging1(monkeypatch):
         content = fp.read()
     assert content == "something new"
 
-def test_clean_merge():
-    test_cleanup()
+# def test_clean_merge():
+#     test_cleanup()

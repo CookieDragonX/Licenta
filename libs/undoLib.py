@@ -2,7 +2,7 @@ import sys
 import os
 from utils.prettyPrintLib import printColor
 from libs.IndexManager import unstageFiles, stageFiles
-from libs.BranchingManager import deleteBranch, createBranch
+from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot
 from libs.BasicUtils import getResource, dumpResource
 import shutil
 
@@ -37,8 +37,10 @@ def undoCommand(args):
         undo_create_branch(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'delete_branch':
         undo_delete_branch(prevArgs, indexToUndo)
+    elif prevArgs["command"] == 'merge':
+        undo_merge(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'login':
-        undo_login(prevArgs)
+        undo_login(prevArgs, indexToUndo)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -53,12 +55,10 @@ def undo_add(args, indexToUndo):
 
 def undo_remove(args, indexToUndo):
     stageFiles(list(args["paths"]))
-
-def undo_commit(args, indexToUndo):
-    pass
+    restoreResource(indexToUndo, "staged")
 
 def undo_checkout(args,indexToUndo):
-    pass
+    checkoutSnapshot(args["ref"])
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
@@ -72,4 +72,10 @@ def undo_delete_branch(args,indexToUndo):
 
 
 def undo_login(args,indexToUndo):
+    restoreResource(indexToUndo, "userdata")
+
+def undo_merge(args):
+    pass
+
+def undo_commit(args, indexToUndo):
     pass

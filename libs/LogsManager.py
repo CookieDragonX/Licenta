@@ -22,10 +22,10 @@ def logCommit(commitObject):
     logs["nodes"][commitHash]=depth
     dumpResource("logs", logs)
 
-def printCommitData(hash):
-    commit = load(hash, os.path.join('.cookie', 'objects'))
+def printCommitData(commit):
+
     printColor("---------------------------------------------------------------------", "white")
-    printColor("     <> Commit : {}".format(commit.getHash()), "white")
+    printColor("     <> Commit : {}".format(commit.getHash())                         , "green")
     printColor("        '{}'".format(commit.message), "white")
     print     ("                                                                              ")
     printColor("  Author       : {}".format(commit.author), "white")
@@ -33,7 +33,46 @@ def printCommitData(hash):
     printColor("  Snapshot     : {}".format(commit.snapshot), "white")
     printColor("---------------------------------------------------------------------", "white")
 
-
+def logSequence(args):
+    head = getResource("HEAD")
+    currentCommit = load(head["hash"], os.path.join('.cookie', 'objects'))
+    trackHistory=[]
+    key = None
+    while key != 'q':
+        trackHistory.append(currentCommit)
+        printCommitData(currentCommit)
+        if len(trackHistory) > 1:
+            normalList = ['q', 'n', 'p']
+            normalInputStr = "    <> [q] - quit | [n] - next | [p] - prev -->"
+            mergeList = ['q', 'b', 'm', 'p']
+            mergeInputStr = "    <> [q] - quit | [b] - base | [m] - merged | [p] - prev -->"
+        else : 
+            normalList = ['q', 'n']
+            normalInputStr = "    <> [q] - quit | [n] - next -->"
+            mergeList = ['q', 'b', 'm']
+            mergeInputStr = "    <> [q] - quit | [b] - base | [m] - merged -->"
+        if currentCommit.parents[0] == 'None':
+            printColor("This is the first commit, exitting...", "green")
+            key = 'q'
+        else:
+            if len(currentCommit.parents) == 1 or args.b:
+                while key not in normalList:
+                    print("Please choose a valid option!")
+                    key = input(normalInputStr).lower()
+            else:
+                while key not in mergeList:
+                    key = input(mergeInputStr).lower()
+        if key == 'q':
+            printColor("Stopping log...", "green")
+            break        
+        elif key == 'n' or key =='b':
+            currentCommit = load(currentCommit.parents[0], os.path.join('.cookie', 'objects'))
+        elif key == 'm':
+            currentCommit = load(currentCommit.parents[1], os.path.join('.cookie', 'objects'))
+        elif key == 'p':
+            currentCommit = trackHistory[-2]
+            trackHistory.pop()
+            trackHistory.pop()
 
 # @wrapper
 # def logCommits(stdscr, hash):
