@@ -7,7 +7,7 @@ import shutil
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
-from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
+from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
 from libs.UndoLib import undoCommand
 from libs.MergeLib import mergeSourceIntoTarget
@@ -102,6 +102,9 @@ argsp.add_argument("ref",
                    nargs="?",
                    default=None,
                    help="Hash or branch to base new branch upon. If left empty will create based on current branch")
+argsp.add_argument("-c",
+                   action='store_true',
+                   help="Create with checkout.")
 
 #Branch deletion subcommand definition
 argsp = argsubparsers.add_parser("delete_branch", help="Delete an existing branch.")
@@ -110,7 +113,7 @@ argsp.add_argument("-b",
                    metavar="branch",
                    default=None,
                    required=True,
-                   help="Branch name to create.")
+                   help="Branch name to delete.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("merge", help="Merge Commits or branches.")
@@ -127,6 +130,31 @@ argsp.add_argument("-s",
                    required=True,
                    help="Source content(s) for merge.")
 
+# Tag creation subcommand definition
+argsp = argsubparsers.add_parser("create_tag", help="Create a new tag.")
+argsp.add_argument("-t",
+                   "--tag",
+                   metavar="tag",
+                   default=None,
+                   required=True,
+                   help="Tag name to create.")
+argsp.add_argument("ref",
+                   metavar="ref",
+                   nargs="?",
+                   default=None,
+                   help="Hash or branch to base new tag upon. If left empty will create based on current ref")
+argsp.add_argument("-c",
+                   action='store_true',
+                   help="Create with checkout.")
+
+# Tag deletion subcommand definition
+argsp = argsubparsers.add_parser("delete_tag", help="Delete an existing tag.")
+argsp.add_argument("-t",
+                   "--tag",
+                   metavar="tag",
+                   default=None,
+                   required=True,
+                   help="Tag name to delete.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("log", help="Print commit data.")
@@ -161,9 +189,9 @@ def main(argv=sys.argv[1:]):
     elif args.command == 'delete_branch':   # delete a branch
         delete_branch(args)
     elif args.command == 'create_tag':      # create a tag
-        pass
-    elif args.command == 'delete_tag':      # deletea a tag
-        pass
+        create_tag(args)
+    elif args.command == 'delete_tag':      # delete a tag
+        delete_tag(args)
     elif args.command == 'status':          # show status
         status(args)
     elif args.command == 'login':           # login with username/email
@@ -258,7 +286,7 @@ def checkout(args):
 @addToUndoCache()
 @cookieRepoCertified
 def create_branch(args):
-    createBranch(args.branch, args.ref==None, args.ref)
+    createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
     updateHead(args.branch, args.ref==None, args.ref)
 
 @addToUndoCache()
@@ -266,11 +294,22 @@ def create_branch(args):
 def delete_branch(args):
     deleteBranch(args.branch)
 
+@addToUndoCache()
+@cookieRepoCertified
+def create_tag(args):
+    createTag(args.branch, args.ref==None, args.ref, checkout=args.c)
+    updateHead(args.branch, args.ref==None, args.ref)
+
+@addToUndoCache()
+@cookieRepoCertified
+def delete_tag(args):
+    deleteTag(args.branch)
+
 @cookieRepoCertified
 def status(args):
     generateStatus(args, quiet=False)
 
-@addToUndoCache()
+@addToUndoCache(saveResource=["refs", "HEAD", "logs", "staged"])
 @cookieRepoCertified
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
@@ -283,8 +322,8 @@ def login(args):
 @cookieRepoCertified
 def log(args):
     logSequence(args)
-    
-@addToUndoCache()
+
+@addToUndoCache(saveResource=["refs", "HEAD", "logs", "staged"])
 @cookieRepoCertified
 def merge(args):
     mergeSourceIntoTarget(args.target, args.source)

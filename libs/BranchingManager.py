@@ -6,38 +6,42 @@ from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 
-def checkoutSnapshot(args):
+def checkoutSnapshot(args, specRef = None):
+    if not specRef:
+        ref = args.ref
+    else :
+        ref = specRef
     head=getResource("HEAD")
-    if head["name"] == args.ref:
+    if head["name"] == ref:
         printColor("Already on branch {}!".format(head["name"]), "blue")
         sys.exit(1)
     new_head='DETACHED'
     objectsPath = os.path.join('.cookie', 'objects')
-    if args.ref == None:
+    if ref == None:
         printColor("This does nothing, but is allowed. Give me some arguments!", "blue")
         sys.exit(0)
     refs=getResource("refs")
-    if args.ref not in refs['B'] and args.ref not in refs['T']:
+    if ref not in refs['B'] and ref not in refs['T']:
         try:
-            objType=getObjectType(args.ref, objectsPath)
+            objType=getObjectType(ref, objectsPath)
         except NoSuchObjectException as e:
             printColor("There is no such commit to check out!", "red")
             sys.exit(1)
         if objType != 'C':
             printColor("[DEV ERROR][checkoutSnapshot] That's not the hash of a commit, where did you get that?", "red") 
             sys.exit(1)                                                                             #there's improvement to be done here
-        snapshot=getSnapshotFromCommit(args.ref, objectsPath)                                       #get snapshot and raise notACommitError
-        commitHash=args.ref
+        snapshot=getSnapshotFromCommit(ref, objectsPath)                                       #get snapshot and raise notACommitError
+        commitHash=ref
     else:
         try:
-            if args.ref in refs['B']:
-                printColor("Checking out branch {}...".format(args.ref), "green")
-                commitHash=refs['B'][args.ref]
-            elif args.ref in refs['T']:
-                printColor("Checking out tag {}...".format(args.ref), "green")
-                commitHash=refs['T'][args.ref]
+            if ref in refs['B']:
+                printColor("Checking out branch {}...".format(ref), "green")
+                commitHash=refs['B'][ref]
+            elif ref in refs['T']:
+                printColor("Checking out tag {}...".format(ref), "green")
+                commitHash=refs['T'][ref]
             snapshot=getSnapshotFromCommit(commitHash, objectsPath)
-            new_head=args.ref
+            new_head=ref
         except NoSuchObjectException as e:
             printColor("Could not find commit with hash {}".format(commitHash), "red")
             sys.exit(1)
@@ -81,7 +85,7 @@ def updateHead(newHead, currentRef=True, ref=None):
         head["hash"]=ref
     dumpResource("HEAD", head)
 
-def createBranch(branchName, currentRef=True, ref=None):
+def createBranch(branchName, currentRef=True, ref=None, checkout=False):
     head=getResource("HEAD")
     if head["hash"]=="":
         printColor("Please commit something before creating branches!", "red")
@@ -94,6 +98,8 @@ def createBranch(branchName, currentRef=True, ref=None):
             if ref==None:
                 printColor("[DEV ERROR][createBranch] Method should take given ref but no ref given!", "red")
                 sys.exit(1)
+        elif checkout:
+            checkoutSnapshot(None, ref)
         refs=getResource("refs")
         if branchName in refs["B"].keys():
             #printColor("Branch name '{}' already exists!".format(branchName), "red")
@@ -103,6 +109,31 @@ def createBranch(branchName, currentRef=True, ref=None):
         dumpResource("refs", refs)
     except BranchExistsException as e:
         printColor("Cannot create a branch with name '{}' as one already exists", "red")
+
+def createTag(tagName, currentRef=True, ref=None, checkout=False):
+    head=getResource("HEAD")
+    if head["hash"]=="":
+        printColor("Please commit something before creating tags!", "red")
+        sys.exit(1)
+    try:
+        if currentRef:
+            ref=head["hash"]
+        if not currentRef :
+            if ref==None:
+                printColor("[DEV ERROR][createTag] Method should take given ref but no ref given!", "red")
+                sys.exit(1)
+            elif checkout:
+                checkoutSnapshot(None, ref)
+        refs=getResource("refs")
+        if tagName in refs["T"].keys():
+            #printColor("Branch name '{}' already exists!".format(branchName), "red")
+            raise BranchExistsException("Tag already exists")
+        else:
+            refs["T"][tagName]=ref
+        dumpResource("refs", refs)
+    except BranchExistsException as e:
+        printColor("Cannot create a tag with name '{}' as one already exists", "red")
+
 
 def updateBranchSnapshot():
     head=getResource("HEAD")
@@ -123,6 +154,23 @@ def deleteBranch(branchName):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
     safeWrite(os.path.join(undoCachePath, branchName), undoInfo)
+        
+    dumpResource("HEAD", head)
+    dumpResource("refs", refs)
+
+def deleteTag(tagName):
+    head=getResource("HEAD")
+    refs=getResource("refs") 
+    if tagName not in refs['T']:
+        printColor("No such branch to be deleted {}".format(tagName))
+        sys.exit(1)
+    undoInfo=refs['T'][tagName]
+    if head["name"]==tagName:
+        head["name"] = "DETACHED"
+    del refs['T'][tagName]
+    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
+    os.makedirs(undoCachePath, exist_ok=True)
+    safeWrite(os.path.join(undoCachePath, tagName), undoInfo)
         
     dumpResource("HEAD", head)
     dumpResource("refs", refs)

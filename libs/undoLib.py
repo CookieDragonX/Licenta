@@ -2,7 +2,7 @@ import sys
 import os
 from utils.prettyPrintLib import printColor
 from libs.IndexManager import unstageFiles, stageFiles
-from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot
+from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, deleteTag, createTag
 from libs.BasicUtils import getResource, dumpResource
 import shutil
 
@@ -37,6 +37,10 @@ def undoCommand(args):
         undo_create_branch(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'delete_branch':
         undo_delete_branch(prevArgs, indexToUndo)
+    elif prevArgs["command"] == 'create_tag':
+        undo_create_tag(prevArgs, indexToUndo)
+    elif prevArgs["command"] == 'delete_tag':
+        undo_delete_tag(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'merge':
         undo_merge(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'login':
@@ -66,16 +70,31 @@ def undo_create_branch(args,indexToUndo):
 def undo_delete_branch(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
-    with open(os.path.join(undoCachePath, args["branch"]), "r") as deletedBranchFile:
+    with open(os.path.join(undoCachePath, args["tag"]), "r") as deletedBranchFile:
         sha=deletedBranchFile.read().strip()
-    createBranch(args["branch"], currentRef=False, ref=sha)
+    createBranch(args["tag"], currentRef=False, ref=sha)
 
+def undo_create_tag(args,indexToUndo):
+    deleteTag(args["tag"])
+
+def undo_delete_tag(args,indexToUndo):
+    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
+    os.makedirs(undoCachePath, exist_ok=True)
+    with open(os.path.join(undoCachePath, args["tag"]), "r") as deletedTagFile:
+        sha=deletedTagFile.read().strip()
+    createTag(args["tag"], currentRef=False, ref=sha, checkout=True)
 
 def undo_login(args,indexToUndo):
     restoreResource(indexToUndo, "userdata")
 
-def undo_merge(args):
-    pass
+def undo_merge(args, indexToUndo):
+    restoreResource(indexToUndo, "refs")
+    restoreResource(indexToUndo, "HEAD")
+    restoreResource(indexToUndo, "logs")
+    restoreResource(indexToUndo, "staged")
 
 def undo_commit(args, indexToUndo):
-    pass
+    restoreResource(indexToUndo, "refs")
+    restoreResource(indexToUndo, "HEAD")
+    restoreResource(indexToUndo, "logs")
+    restoreResource(indexToUndo, "staged")

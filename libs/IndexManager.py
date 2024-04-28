@@ -476,9 +476,10 @@ def getStagedFiles():
 
 def getDeletedFiles():
     staged=getResource("staged")
-    deletedFiles=dict()
-    deletedFiles.update(staged['D'])
-    return list(deletedFiles.keys())
+    deletedFiles=list(staged['D'].keys())
+    for file in staged['R']:
+        deletedFiles.append(staged['R'][file][0])
+    return deletedFiles
 
 def isThereStagedStuff():
     staged=getResource("staged")
