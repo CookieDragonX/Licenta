@@ -2,7 +2,7 @@ import os
 import json
 import subprocess
 import shutil
-
+from libs.BasicUtils import getResource
 ###################################################################
 #               Preconditions:
 #
@@ -108,13 +108,72 @@ def test_add2():
 def test_commit2():
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Removed file.txt& added nested file"],
-        capture_output = True,
-        text = True 
     )
     with open(os.path.join(".cookie", "index"), "r") as indexFile:
         index=json.load(indexFile)
     assert "file.txt" not in index
     assert os.path.join("dir1", "dir2", "nestedFile") in index
+
+def test_modified():
+    with open(os.path.join("blah.txt"), "w") as testFile:
+        testFile.write("content")
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("blah.txt")],
+    )
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "add blah.txt."],
+    )
+    with open(os.path.join("blah.txt"), "w") as testFile:
+        testFile.write("should appear as modified.")
+    result = subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        capture_output = True,
+        text = True 
+    )
+    assert "-->Files modified:" in result.stdout
+
+def test_renamed():
+    with open(os.path.join("blah.txt"), "w") as testFile:
+        testFile.write("content")
+    os.rename('blah.txt', 'new.txt')
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("blah.txt")],
+    )
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("new.txt")],
+    )
+    result = subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        capture_output = True,
+        text = True 
+    )
+    assert "-->Files renamed:" in result.stdout
+    assert "{} --> {}".format("blah.txt", "new.txt") in result.stdout
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "rename blah.txt to new.txt"],
+    )
+    index = getResource("index")
+    assert "blah.txt" not in index
+    assert "new.txt" in index
+
+def test_copied():
+    os.makedirs("somedir", exist_ok=True)
+    with open(os.path.join("somedir", "new_copy.txt"), "w") as testFile:
+        testFile.write("content")
+
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("somedir", "new_copy.txt")],
+    )
+    result = subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        capture_output = True,
+        text = True 
+    )
+    assert "-->Files copied:" in result.stdout
+    assert "{} <-- {}".format(os.path.join("somedir", "new_copy.txt"), "new.txt") in result.stdout
+    subprocess.run(
+        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "copy new.txt to somedir"],
+    )
 
 def test_delete_and_cleanup():
     result = subprocess.run(

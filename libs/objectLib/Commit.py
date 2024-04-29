@@ -1,7 +1,7 @@
 from libs.objectLib.Object import Object
 
 # Commit --> struct{
-#     parents : array{Commit}
+#     parents : array{Commit}       # this can be either [1 commit -- normal] or [2 commits -- merge commit]!
 #     author : str
 #     message : str
 #     timestamp : int

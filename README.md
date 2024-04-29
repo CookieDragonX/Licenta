@@ -7,6 +7,10 @@ TO DO:
 
 ---- TOP PRIO ----
  
+- print refs
+
+- tag
+
 - encrypt data in objects --final
 
 - merging strategies

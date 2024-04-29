@@ -12,13 +12,13 @@ class Blob(Object):
             except AttributeError:
                 metaDataDecoded=metaData
             metaDataSplit=metaDataDecoded.split('?')
-            self.filenameAbsPath=metaDataSplit[1]
-            self.filename = os.sep.join(self.filenameAbsPath.split(os.sep))
+            self.filenameAbsPath=metaDataSplit[1]           # split with '/'
+            self.filename = os.sep.join(self.filenameAbsPath.split("/"))
             self.content='?'.join(metaDataSplit[2:])
         else :
             self.filenameAbsPath = ""
             self.filename = ""
             self.content = ""
     def getMetaData(self):
-        return ('B?{}?{}'.format(self.filenameAbsPath,self.content)).encode('utf-8')
+        return ('B?{}?{}'.format("/".join(self.filename.split(os.sep)),self.content)).encode('utf-8')
 

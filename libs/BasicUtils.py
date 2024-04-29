@@ -104,9 +104,10 @@ def printStaged():
             for item in staged['R']:
                 if os.path.basename(item)==os.path.basename(staged['R'][item][0]):
                     moved[item]=staged['R'][item]
-            printColor("-->Files moved:",'green')
-            print(*["   {} --> {}".format(moved[file][0], file) for file in moved], sep=os.linesep)
-            if len(moved[item]) < len(staged['R']):
+            if len(moved) > 0 :
+                printColor("-->Files moved:",'green')
+                print(*["   {} --> {}".format(moved[file][0], file) for file in moved], sep=os.linesep)
+            if len(moved) < len(staged['R']):
                 printColor("-->Files renamed:",'green')
                 print(*["   {} --> {}".format(staged['R'][file][0], file) if file not in moved else "" for file in staged['R']], sep=os.linesep)
         if staged['T']!={}:

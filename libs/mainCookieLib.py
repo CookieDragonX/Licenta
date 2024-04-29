@@ -7,11 +7,11 @@ import shutil
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
-from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch
+from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
 from libs.UndoLib import undoCommand
 from libs.MergeLib import mergeSourceIntoTarget
-
+from libs.LogsManager import logSequence
 cookieWordArt='''
                                  __   .__        
               ____  ____   ____ |  | _|__| ____  
@@ -102,6 +102,9 @@ argsp.add_argument("ref",
                    nargs="?",
                    default=None,
                    help="Hash or branch to base new branch upon. If left empty will create based on current branch")
+argsp.add_argument("-c",
+                   action='store_true',
+                   help="Create with checkout.")
 
 #Branch deletion subcommand definition
 argsp = argsubparsers.add_parser("delete_branch", help="Delete an existing branch.")
@@ -110,7 +113,7 @@ argsp.add_argument("-b",
                    metavar="branch",
                    default=None,
                    required=True,
-                   help="Branch name to create.")
+                   help="Branch name to delete.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("merge", help="Merge Commits or branches.")
@@ -127,10 +130,37 @@ argsp.add_argument("-s",
                    required=True,
                    help="Source content(s) for merge.")
 
+# Tag creation subcommand definition
+argsp = argsubparsers.add_parser("create_tag", help="Create a new tag.")
+argsp.add_argument("-t",
+                   "--tag",
+                   metavar="tag",
+                   default=None,
+                   required=True,
+                   help="Tag name to create.")
+argsp.add_argument("ref",
+                   metavar="ref",
+                   nargs="?",
+                   default=None,
+                   help="Hash or branch to base new tag upon. If left empty will create based on current ref")
+argsp.add_argument("-c",
+                   action='store_true',
+                   help="Create with checkout.")
+
+# Tag deletion subcommand definition
+argsp = argsubparsers.add_parser("delete_tag", help="Delete an existing tag.")
+argsp.add_argument("-t",
+                   "--tag",
+                   metavar="tag",
+                   default=None,
+                   required=True,
+                   help="Tag name to delete.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("log", help="Print commit data.")
-
+argsp.add_argument("-b",
+                   action='store_true',
+                   help="Priority for main branches and not merges.")
 
 
 #Undo subcommand definition
@@ -144,31 +174,35 @@ argsp.add_argument("index",
 
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
-    if args.command == 'add':
+    if args.command == 'add':               # add files to staging area
         add(args)
-    elif args.command == 'remove':
+    elif args.command == 'remove':          # remove files from staging area
         remove(args)
-    elif args.command == 'init':
+    elif args.command == 'init':            # initialize cookie repository
         init(args)
-    elif args.command == 'commit':
+    elif args.command == 'commit':          # commit staging area
         commit(args)
-    elif args.command == 'checkout':
+    elif args.command == 'checkout':        # checkout branch/tag/commit
         checkout(args)
-    elif args.command == 'create_branch':
+    elif args.command == 'create_branch':   # create a branch
         create_branch(args)
-    elif args.command == 'delete_branch':
+    elif args.command == 'delete_branch':   # delete a branch
         delete_branch(args)
-    elif args.command == 'status':
+    elif args.command == 'create_tag':      # create a tag
+        create_tag(args)
+    elif args.command == 'delete_tag':      # delete a tag
+        delete_tag(args)
+    elif args.command == 'status':          # show status
         status(args)
-    elif args.command == 'login':
+    elif args.command == 'login':           # login with username/email
         login(args)
-    elif args.command == 'delete':
+    elif args.command == 'delete':          # delete repo DEV ONLY!
         delete(args)
-    elif args.command == 'undo':
+    elif args.command == 'undo':            # undo last command
         undo(args)
-    elif args.command == 'log':
+    elif args.command == 'log':             # log show commits
         log(args)
-    elif args.command == 'merge':
+    elif args.command == 'merge':           # merge two branches/two commits
         merge(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
@@ -211,7 +245,6 @@ def addToUndoCache(fct, saveResource=[]):
             printColor("There's no undo-ing this...", "red")
             printColor("Clone Repository again!", "blue")
         else:
-
             history["commands"][index+1]=commandData
             history["index"]=history["index"]+1
             dumpResource("history", history)
@@ -253,7 +286,7 @@ def checkout(args):
 @addToUndoCache()
 @cookieRepoCertified
 def create_branch(args):
-    createBranch(args.branch, args.ref==None, args.ref)
+    createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
     updateHead(args.branch, args.ref==None, args.ref)
 
 @addToUndoCache()
@@ -261,26 +294,36 @@ def create_branch(args):
 def delete_branch(args):
     deleteBranch(args.branch)
 
+@addToUndoCache()
+@cookieRepoCertified
+def create_tag(args):
+    createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
+    updateHead(args.tag, args.ref==None, args.ref)
+
+@addToUndoCache()
+@cookieRepoCertified
+def delete_tag(args):
+    deleteTag(args.branch)
+
 @cookieRepoCertified
 def status(args):
     generateStatus(args, quiet=False)
 
-@addToUndoCache()
+@addToUndoCache(saveResource=["refs", "index", "HEAD", "logs", "staged"])
 @cookieRepoCertified
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
 
-@addToUndoCache()
+@addToUndoCache(saveResource=["userdata"])
 @cookieRepoCertified
 def login(args):
     editLoginFile(args)
 
 @cookieRepoCertified
 def log(args):
-    #head=getResource("HEAD")
-    #printCommitData(head["hash"])
-    pass
-@addToUndoCache()
+    logSequence(args)
+
+@addToUndoCache(saveResource=["refs", "index", "HEAD", "logs", "staged"])
 @cookieRepoCertified
 def merge(args):
     mergeSourceIntoTarget(args.target, args.source)
