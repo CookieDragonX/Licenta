@@ -61,6 +61,13 @@ def mergeSourceIntoTarget(target, sources):
 
 def mergeBlobs(target, source, base, objectsPath): #the args are hashes
     filename = None
+    if target == None and source==None and base == None:
+        printColor("[DEV ERROR][mergeBlobs] all args None", "red")
+    elif base == None:
+        if target == None and source != None:
+            return source
+        elif target != None and source == None:
+            return target
     if target == None:
         targetBlob = Blob(None)
     else:
@@ -121,6 +128,13 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
     return newBlob.getHash()
 
 def mergeTrees(target, source, base, objectsPath): # the args are hashes
+    if target == None and source==None and base == None:
+        printColor("[DEV ERROR][mergeBlobs] all args None", "red")
+    elif base == None:
+        if target == None and source != None:
+            return source
+        elif target != None and source == None:
+            return target
     if target == None:
         targetTree = Tree(None)
     else:
@@ -184,7 +198,7 @@ def mergeTrees(target, source, base, objectsPath): # the args are hashes
             # case SHOULD have already been handled above
             continue
         else:
-            if item in baseTree.map[item]:
+            if item in baseTree.map:
                 # CONFLICT item was deleted in target yet it still exists in source
                 objType = getObjectType(sourceTree.map[item], objectsPath)
                 targetArg = None
@@ -248,7 +262,7 @@ def createMergeCommit(target, source):
                 printColor("Please provide a valid option!", "red")
         if opt in ['y', 'yes']:
             if targetIsBranchName:
-                refs[target] = sourceSha
+                refs['B'][target] = sourceSha
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=sourceSha)
                     resetToSnapshot(sourceTreeSha)
@@ -290,7 +304,7 @@ def createMergeCommit(target, source):
             store(newCommit, objectsPath)
             logCommit(newCommit)
             if targetIsBranchName:
-                refs[target] = newCommit.getHash()
+                refs["B"][target] = newCommit.getHash()
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=newCommit.getHash())
                     resetToSnapshot(newCommit.snapshot)

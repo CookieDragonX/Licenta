@@ -297,8 +297,8 @@ def delete_branch(args):
 @addToUndoCache()
 @cookieRepoCertified
 def create_tag(args):
-    createTag(args.branch, args.ref==None, args.ref, checkout=args.c)
-    updateHead(args.branch, args.ref==None, args.ref)
+    createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
+    updateHead(args.tag, args.ref==None, args.ref)
 
 @addToUndoCache()
 @cookieRepoCertified
@@ -309,7 +309,7 @@ def delete_tag(args):
 def status(args):
     generateStatus(args, quiet=False)
 
-@addToUndoCache(saveResource=["refs", "HEAD", "logs", "staged"])
+@addToUndoCache(saveResource=["refs", "index", "HEAD", "logs", "staged"])
 @cookieRepoCertified
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
@@ -323,7 +323,7 @@ def login(args):
 def log(args):
     logSequence(args)
 
-@addToUndoCache(saveResource=["refs", "HEAD", "logs", "staged"])
+@addToUndoCache(saveResource=["refs", "index", "HEAD", "logs", "staged"])
 @cookieRepoCertified
 def merge(args):
     mergeSourceIntoTarget(args.target, args.source)

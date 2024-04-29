@@ -81,6 +81,10 @@ def createCommit(args, DEBUG=False):
     printColor("Successfully commited changes on branch '{}'".format(currentBranch),"green")
     printColor("Current commit hash: '{}'".format(newCommit.getHash()), 'green')
 
+def generateSnapshot(targetDirs, ignoreDirs):
+    index=getResource("index")
+    return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
+
 def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
     metaData=['T']
     for file in os.listdir(dir):
@@ -94,6 +98,9 @@ def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
             if pathname in index:
                 metaData.append(pathname)
                 metaData.append(index[pathname]['hash']) #case where there's an unmodified file in the repo
+            elif os.path.isdir(pathname): 
+                metaData.append(pathname)
+                metaData.append(TreeHash(pathname, index, objectsPath, targetDirs, ignoreDirs))
             else:
                 #case where file is not tracked 
                 pass
@@ -106,10 +113,6 @@ def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
     tree=Tree('?'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
-
-def generateSnapshot(targetDirs, ignoreDirs):
-    index=getResource("index")
-    return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
 
 def addFileToIndex(pathname):
     index=getResource("index")
@@ -411,7 +414,17 @@ def stageFiles(paths):
     staged=getResource("staged")
     unstaged=getResource("unstaged")
     index=getResource("index")
-    for pathname in paths:
+    if '.' in paths :
+        targetPaths = []
+        targetPaths.extend(unstaged['A'].keys())
+        targetPaths.extend(unstaged['M'].keys())
+        targetPaths.extend(unstaged['D'].keys())
+        for path in paths:
+            if path in targetPaths:
+                targetPaths.remove(path)
+    else:
+        targetPaths = paths
+    for pathname in targetPaths:
         pathname=os.path.relpath(pathname, "")
         if pathname in unstaged['A']:
             staged['A'][pathname]=statDictionary(os.lstat(pathname))
@@ -440,7 +453,21 @@ def stageFiles(paths):
 
 def unstageFiles(paths):
     staged=getResource("staged")
-    for pathname in paths:
+    if '.' in paths :
+        targetPaths = []
+        targetPaths.extend(staged['A'].keys())
+        targetPaths.extend(staged['M'].keys())
+        targetPaths.extend(staged['D'].keys())
+        targetPaths.extend(staged['C'].keys())
+        targetPaths.extend(staged['R'].keys())
+        targetPaths.extend(staged['T'].keys())
+        targetPaths.extend(staged['X'].keys())
+        for path in paths:
+            if path in targetPaths:
+                targetPaths.remove(path)
+    else:
+        targetPaths = paths
+    for pathname in targetPaths:
         pathname=os.path.relpath(pathname, "")
         if pathname in staged['A']:
             del staged['A'][pathname]

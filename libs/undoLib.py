@@ -10,6 +10,8 @@ import shutil
 def restoreResource(index, resource_name):
     oldResource = getResource(resource_name, specificPath=os.path.join(".cookie", "cache", "undo_cache", str(index)))
     dumpResource(resource_name, oldResource)
+    
+def clearCache(index):
     shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
 
 def undoCommand(args):
@@ -56,10 +58,12 @@ def undoCommand(args):
 def undo_add(args, indexToUndo):
     unstageFiles(list(args["paths"]))
     restoreResource(indexToUndo, "staged")
+    clearCache(indexToUndo)
 
 def undo_remove(args, indexToUndo):
     stageFiles(list(args["paths"]))
     restoreResource(indexToUndo, "staged")
+    clearCache(indexToUndo)
 
 def undo_checkout(args,indexToUndo):
     checkoutSnapshot(args["ref"])
@@ -86,15 +90,20 @@ def undo_delete_tag(args,indexToUndo):
 
 def undo_login(args,indexToUndo):
     restoreResource(indexToUndo, "userdata")
+    clearCache(indexToUndo)
 
 def undo_merge(args, indexToUndo):
     restoreResource(indexToUndo, "refs")
     restoreResource(indexToUndo, "HEAD")
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
+    restoreResource(indexToUndo, "index")
+    clearCache(indexToUndo)
 
 def undo_commit(args, indexToUndo):
     restoreResource(indexToUndo, "refs")
     restoreResource(indexToUndo, "HEAD")
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
+    restoreResource(indexToUndo, "index")
+    clearCache(indexToUndo)
