@@ -6,22 +6,20 @@ Cookie File Versioning System</br>
 TO DO:
 
 ---- TOP PRIO ----
- 
-- print refs
 
-- tag
+- setRemoteData
+
+- push
+
+- pull
+
+- clone
+
+- pack
 
 - encrypt data in objects --final
 
-- merging strategies
-
-- ssh connection with server
-
-- cookie undo
-
 - write more tests
-
-- implement log -- curses
 
 - queue for push command after implementing remote repo
 

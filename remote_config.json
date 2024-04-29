@@ -1,0 +1,8 @@
+{
+    "host":"192.168.0.101",
+    "port":"22",
+    "remote_user":"Utilizator",
+    "local_ssh_private_key":"C:\\Users\\utilizator\\.ssh\\id_rsa",
+    "remote_os":"win32",
+    "remote_path":"D:\\CookieRemote"
+}

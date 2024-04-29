@@ -5,7 +5,7 @@ import shutil
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
-from libs.RemotingManager import editLoginFile
+from libs.RemotingManager import editLoginFile, cloneRepo
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
@@ -19,6 +19,16 @@ cookieWordArt='''
             \  \__(  <_> |  <_> )    <|  \  ___/ 
              \___  >____/ \____/|__|_ \__|\___  >
                  \/                  \/       \/ 
+'''
+config_template = '''
+{
+    "host":"<hostname>",
+    "port":"<port for ssh (22)>",
+    "remote_user":"<remote username>",
+    "local_ssh_private_key":"<path to local key>",
+    "host_os":"<win32/unix>",
+    "remote_path":"<path to remote repositories>"
+}
 '''
 DEBUG=False  #make manual testing easier, but paradoxically make automated tests fail D:
 
@@ -162,6 +172,30 @@ argsp.add_argument("-b",
                    action='store_true',
                    help="Priority for main branches and not merges.")
 
+#Undo subcommand definition
+argsp = argsubparsers.add_parser("clone", help="Clone remote repository.")
+argsp.add_argument("name",
+                   metavar="name",
+                   default=None,
+                   help="Repository name to clone.")
+argsp.add_argument("-c",
+                   "--config",
+                   metavar="config",
+                   default=None,
+                   help="Path to clone configuration.")
+argsp.add_argument("-p",
+                   "--path",
+                   metavar="path",
+                   default=os.getcwd(),
+                   help="Where to clone the repository.")
+argsp.add_argument("-b",
+                   "--branch",
+                   metavar="branch",
+                   default="master",
+                   help="Branch name to clone.")
+argsp.add_argument("-s",
+                   action='store_true',
+                   help="Option to clone sparsely.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command.")
@@ -204,6 +238,8 @@ def main(argv=sys.argv[1:]):
         log(args)
     elif args.command == 'merge':           # merge two branches/two commits
         merge(args)
+    elif args.command == 'clone':           # clone remote
+        clone(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -254,6 +290,18 @@ def addToUndoCache(fct, saveResource=[]):
 def init(args):
     print(cookieWordArt)
     createDirectoryStructure(args)
+
+def clone(args):
+    if not args.config :
+        printColor("Please provide a path to a configuration file.", "red")
+        print("     <> Usage:")
+        print("         cookie <repository_name> -c <path_to_config>")
+        print("=============================================================")
+        print("     <> Configuration template:")
+        print(config_template)
+        sys.exit(1)
+    print(cookieWordArt)
+    cloneRepo(args)
 
 @cookieRepoCertified
 def delete(args):

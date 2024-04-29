@@ -5,14 +5,14 @@ import json
 
 def getResource(name, specificPath=None):
     #for all json objects in .cookie dir
-    if name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
-        printColor("[DEV ERROR][getResource] Unknown resource '{}'.".format(name), "red")
-        sys.exit(1)
-    elif specificPath:
+    if specificPath:
         if not os.path.isdir(specificPath):
             printColor("[DEV ERROR][getResource] Cannot find resource '{}' at '{}'.".format(name, specificPath), "red")
             sys.exit(1)
         path=os.path.join(specificPath, name)
+    elif name not in ["HEAD", "history", "index", "refs", "staged", "unstaged", "userdata", "logs"]:
+        printColor("[DEV ERROR][getResource] Unknown resource '{}'.".format(name), "red")
+        sys.exit(1)  
     else:
         path=os.path.join(".cookie", name)
     with open(path, "r") as fp:
@@ -62,7 +62,7 @@ def createDirectoryStructure(args):
         safeWrite(os.path.join(project_dir, "staged"), {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "unstaged"), {"A":{},"D":{},"M":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "HEAD"), {"name":"master","hash":""}, jsonDump=True)
-        safeWrite(os.path.join(project_dir, "userdata"), {"user":"","email":""}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "userdata"), {"user":"", "email":"", "host":"192.168.0.101", "port":"22", "remote_user":"Utilizator", "ssh_key_path":"C:\\Users\\utilizator\\.ssh\\id_rsa", "host_os":"win32", "remote_scripts_path":"D:\CookieRemote"}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "history"), {"index":0,"commands":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "logs"), {"adj":{}, "nodes":{}, "edges":{}, "edge_index":0}, jsonDump=True)
