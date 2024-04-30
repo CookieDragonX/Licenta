@@ -47,7 +47,7 @@ def test_branching1():
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "create_branch", "-b", "secondary_branch"]
     )
-    with open(os.path.join('.cookie', 'HEAD')) as headFile:
+    with open(os.path.join('.cookie', 'head')) as headFile:
         head=json.load(headFile)
     assert head["name"]=='secondary_branch'
     
@@ -70,7 +70,7 @@ def test_branching1():
     subprocess.run(
         ["py", "-3", os.path.join(cookiePath, 'cookie'), "checkout", "master"]
     )
-    with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
+    with open(os.path.join('.cookie', 'head'), 'r') as headFile:
         head=json.load(headFile)
     assert head["name"]=='master'
     with open("file.txt", 'r') as file:
@@ -111,7 +111,7 @@ def test_branching1():
 #     subprocess.run(
 #         ["py", "-3", os.path.join(cookiePath, 'cookie'), "create_branch", "-b", "secondary_branch"]
 #     )
-#     with open(os.path.join('.cookie', 'HEAD')) as headFile:
+#     with open(os.path.join('.cookie', 'head')) as headFile:
 #         head=json.load(headFile)
 #     assert head["name"]=='secondary_branch'
     
@@ -134,7 +134,7 @@ def test_branching1():
 #     subprocess.run(
 #         ["py", "-3", os.path.join(cookiePath, 'cookie'), "checkout", "master"]
 #     )
-#     with open(os.path.join('.cookie', 'HEAD'), 'r') as headFile:
+#     with open(os.path.join('.cookie', 'head'), 'r') as headFile:
 #         head=json.load(headFile)
 #     assert head["name"]=='master'
 #     with open("file.txt", 'r') as file:

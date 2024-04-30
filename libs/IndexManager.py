@@ -48,7 +48,7 @@ def createCommit(args, DEBUG=False):
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
         sys.exit(1) 
     metaData=['C']
-    head=getResource("HEAD")
+    head=getResource("head")
     if head["hash"] == "" :
         metaData.append('None')
     else :
@@ -74,7 +74,7 @@ def createCommit(args, DEBUG=False):
     logCommit(newCommit)
     head["hash"]=newCommit.getHash()
     currentBranch=head["name"]
-    dumpResource("HEAD", head)
+    dumpResource("head", head)
     
     resetStagingAreaAndIndex(ignoreDirs)
     updateBranchSnapshot()
@@ -399,7 +399,7 @@ def findNewFiles(dir, index, staged, differences):
 def generateStatus(args, quiet=True):
     compareToIndex()
     if not quiet:
-        head = getResource("HEAD")
+        head = getResource("head")
         if head['hash']=='':
             printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
         printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")
@@ -512,4 +512,3 @@ def isThereStagedStuff():
     staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
-

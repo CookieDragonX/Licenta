@@ -6,13 +6,13 @@ from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 
-def checkoutSnapshot(args, specRef = None):
+def checkoutSnapshot(args, specRef = None, force=False):
     if not specRef:
         ref = args.ref
     else :
         ref = specRef
-    head=getResource("HEAD")
-    if head["name"] == ref:
+    head=getResource("head")
+    if head["name"] == ref and not force:
         printColor("Already on branch {}!".format(head["name"]), "blue")
         sys.exit(1)
     new_head='DETACHED'
@@ -79,14 +79,14 @@ def updateTree(tree, index, objectsPath, action='reset'):
             printColor("[DEV ERROR][resetToSnapshot] action undefined {}".format(action), 'red')
     
 def updateHead(newHead, currentRef=True, ref=None):
-    head=getResource("HEAD") 
+    head=getResource("head") 
     head["name"]=newHead
     if not currentRef:
         head["hash"]=ref
-    dumpResource("HEAD", head)
+    dumpResource("head", head)
 
 def createBranch(branchName, currentRef=True, ref=None, checkout=False):
-    head=getResource("HEAD")
+    head=getResource("head")
     if head["hash"]=="":
         printColor("Please commit something before creating branches!", "red")
         printColor("Merging won't be possible if branches start from different commits!", "red")
@@ -111,7 +111,7 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         printColor("Cannot create a branch with name '{}' as one already exists", "red")
 
 def createTag(tagName, currentRef=True, ref=None, checkout=False):
-    head=getResource("HEAD")
+    head=getResource("head")
     if head["hash"]=="":
         printColor("Please commit something before creating tags!", "red")
         sys.exit(1)
@@ -136,13 +136,13 @@ def createTag(tagName, currentRef=True, ref=None, checkout=False):
 
 
 def updateBranchSnapshot():
-    head=getResource("HEAD")
+    head=getResource("head")
     refs=getResource("refs")
     refs["B"][head["name"]]=head["hash"]
     dumpResource("refs", refs)
 
 def deleteBranch(branchName):
-    head=getResource("HEAD")
+    head=getResource("head")
     refs=getResource("refs") 
     if branchName not in refs['B']:
         printColor("No such branch to be deleted {}".format(branchName))
@@ -155,11 +155,11 @@ def deleteBranch(branchName):
     os.makedirs(undoCachePath, exist_ok=True)
     safeWrite(os.path.join(undoCachePath, branchName), undoInfo)
         
-    dumpResource("HEAD", head)
+    dumpResource("head", head)
     dumpResource("refs", refs)
 
 def deleteTag(tagName):
-    head=getResource("HEAD")
+    head=getResource("head")
     refs=getResource("refs") 
     if tagName not in refs['T']:
         printColor("No such branch to be deleted {}".format(tagName))
@@ -172,5 +172,5 @@ def deleteTag(tagName):
     os.makedirs(undoCachePath, exist_ok=True)
     safeWrite(os.path.join(undoCachePath, tagName), undoInfo)
         
-    dumpResource("HEAD", head)
+    dumpResource("head", head)
     dumpResource("refs", refs)

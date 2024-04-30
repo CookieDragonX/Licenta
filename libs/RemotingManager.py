@@ -1,23 +1,83 @@
 from utils.prettyPrintLib import printColor
-from libs.BasicUtils import dumpResource, getResource
+from libs.BasicUtils import dumpResource, getResource, safeWrite
+from libs.MergeLib import mergeSourceIntoTarget
+from libs.BranchingManager import checkoutSnapshot
 import paramiko
 import os
 from stat import S_ISDIR, S_ISREG
-from libs.BranchingManager import checkoutSnapshot
+import sys
+import logging
+import msvcrt
 
-def transferDirectory(sftp, remotedir, localdir, sep):
+def lockResource(resource_file):
+    try:
+        # Open the resource file in read mode
+        resource_fd = open(resource_file, 'r')
+        msvcrt.locking(resource_fd.fileno(), msvcrt.LK_LOCK, 0)
+        return resource_fd
+    except Exception as e:
+        print(f"Failed to lock resource: {e}")
+        return None
+
+def unlockResource(resource_fd):
+    try:
+        # Release the lock on the file
+        msvcrt.locking(resource_fd.fileno(), msvcrt.LK_UNLCK, 0)
+        resource_fd.close()
+    except Exception as e:
+        print(f"Failed to unlock resource: {e}")
+
+
+def getRemoteResource(sftp, remotePath, resourceName, sep):
+    localPath = os.path.join(".cookie", "cache", "remote_cache")
+    remoteResourcePath = sep.join([remotePath, ".cookie", resourceName])
+    sftp.get(remoteResourcePath, os.path.join(localPath, resourceName))
+    return getResource(resourceName, specificPath=localPath)
+
+def pullDirectory(sftp, remotedir, localdir, sep):
     for entry in sftp.listdir_attr(remotedir):
-        remotepath = sep.join([remotedir, entry.filename])
-        localpath = os.path.join(localdir, entry.filename)
+        if localdir=='.':
+            localpath=entry.filename
+        else:
+            localpath = os.path.join(localdir, entry.filename)
+        if remotedir=='.':
+            localpath=entry.filename
+        else:
+            remotepath = sep.join([remotedir, entry.filename])
         mode = entry.st_mode
         if S_ISDIR(mode):
             try:
                 os.mkdir(localpath)
             except OSError:     
                 pass
-            transferDirectory(sftp, remotepath, localpath, sep)
+            pullDirectory(sftp, remotepath, localpath, sep)
         elif S_ISREG(mode):
+            if "objects" in remotepath:
+                if os.path.exists(localpath):       # no point in replacing objects since they are unique
+                    continue
             sftp.get(remotepath, localpath)
+
+def pushDirectory(sftp, localdir, remotedir, sep, ignoreList):
+    for entry in os.listdir(localdir):
+        if entry in ignoreList:
+            continue
+        if localdir=='.':
+            localpath=entry.filename
+        else:
+            localpath = os.path.join(localdir, entry.filename)
+        if remotedir=='.':
+            localpath=entry.filename
+        else:
+            remotepath = sep.join([remotedir, entry.filename])
+        mode = entry.st_mode
+        if S_ISDIR(mode):
+            try:
+                sftp.mkdir(localpath)
+            except:     
+                pass
+            pushDirectory(sftp, localpath, remotepath, sep, ignoreList)
+        elif S_ISREG(mode):
+            sftp.get(localpath, remotepath)
 
 def editLoginFile(args):
     if args.user == None:
@@ -44,13 +104,18 @@ def cloneRepo(args):
     port = config["port"]  
     username = config["remote_user"]
     private_key_path = config["local_ssh_private_key"]
-
+    config["repo_name"] = args.name
     # Create an SSH key object
     private_key = paramiko.RSAKey.from_private_key_file(private_key_path)
 
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh_client.connect(hostname, port, username, pkey=private_key)
+    try:
+        ssh_client.connect(hostname, port, username, pkey=private_key)
+    except TimeoutError:
+        printColor("Connection attempt timed out!", "red")
+        printColor("Check remote host configuration", "red")
+        sys.exit(1)
 
     sftp = ssh_client.open_sftp()
     if config["remote_os"] == 'win32':
@@ -62,27 +127,112 @@ def cloneRepo(args):
         full_local_path = os.path.join(args.path, args.name)
     else:
         full_local_path = args.name
-
+    
     if not os.path.isdir(full_local_path):
         os.makedirs(full_local_path, exist_ok=True)
-
-    transferDirectory(sftp, full_remote_path, full_local_path, sep)
+    if os.listdir(full_local_path)!=[]:
+        printColor("Directory {} exists and is not empty. Aborting...".format(full_local_path), "red")
+        sys.exit(1)
+    printColor("Cloning repository {} to {}...".format(args.name, full_local_path), "green")
+    pullDirectory(sftp, full_remote_path, full_local_path, sep)
     sftp.close()
     ssh_client.close()
     os.chdir(full_local_path)
-    checkoutSnapshot(None, specRef=args.branch)
+    os.makedirs(os.path.join(".cookie", "cache",  "undo_cache"))
+    os.makedirs(os.path.join(".cookie", "cache",  "index_cache"))
+    os.makedirs(os.path.join(".cookie", "cache",  "merge_cache"))
+    os.makedirs(os.path.join(".cookie", "cache",  "remote_cache"))
+    safeWrite(os.path.join(".cookie", "index"), {}, jsonDump=True)
+    safeWrite(os.path.join(".cookie", "staged"), {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}, jsonDump=True)
+    safeWrite(os.path.join(".cookie", "unstaged"), {"A":{},"D":{},"M":{}}, jsonDump=True)
+    safeWrite(os.path.join(".cookie", "head"), {"name":"master","hash":""}, jsonDump=True)
+    safeWrite(os.path.join(".cookie", "userdata"), {"user":"", "email":""}, jsonDump=True)
+    safeWrite(os.path.join(".cookie", "history"), {"index":0,"commands":{}}, jsonDump=True)
+
+    checkoutSnapshot(None, specRef=args.branch, force=True)
+    safeWrite(os.path.join(".cookie", "remote_config"), config, jsonDump=True)
 
 def remoteConfig(args):
-    pass
+    rconfig = getResource("remote_config")
+    if args.ip or args.port or args.user or args.ssh or args.os or args.rpath or args.name:
+        if args.ip:
+            rconfig["host"]=args.ip
+        if args.port:
+            rconfig["port"]=args.port
+        if args.user:
+            rconfig["remote_user"]=args.user
+        if args.ssh:
+            rconfig["local_ssh_private_key"]=args.ssh
+        if args.os:
+            rconfig["remote_os"]=args.os
+        if args.rpath:
+            rconfig["remote_path"]=args.rpath
+        if args.name:
+            rconfig["repo_name"]=args.name
+    else:
+        printColor("Configuring remote configuration at {}...".format(os.path.join(".cookie", "remote_config")), "green")
+        print                                   ("=============================================================")
+        rconfig["host"] =input                  (" <> Please provide the hostname                          : ")
+        rconfig["port"] =input                  (" <> Please provide the port                              : ")
+        rconfig["remote_user"] = input          (" <> Please provide the remote user                       : ")
+        rconfig["local_ssh_private_key"] = input(" <> Please provide the path to the local private ssh key : ")
+        rconfig["remote_os"] = input            (" <> Please provide the remote OS (win32 for windows)     : ") 
+        rconfig["remote_path"] = input          (" <> Please provide the remote path to repositories       : ")
+        rconfig["repo_name"] = input            (" <> Please provide the remote name of repository         : ")
+        print                                   ("=============================================================")
+    dumpResource("remote_config", rconfig)
+
 
 def pullChanges(args):
-    pass
+    config = getResource("remote_config")
+    hostname = config["host"]  
+    port = config["port"]  
+    username = config["remote_user"]
+    private_key_path = config["local_ssh_private_key"]
+    private_key = paramiko.RSAKey.from_private_key_file(private_key_path)
 
-def pushCommit(args):
-    pass
-def pushTree(args):
-    pass
-def pushObject(args):
-    pass
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh_client.connect(hostname, port, username, pkey=private_key)
+    except TimeoutError:
+        printColor("Connection attempt timed out!", "red")
+        printColor("Check remote host configuration", "red")
+        sys.exit(1)    
+    if config["remote_os"] == 'win32':
+        sep = '\\'
+    else :
+        sep = '/'
+    sftp = ssh_client.open_sftp()
+    remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
+    
+    refs = getResource("refs")
+    head = getResource("head")
+    paramiko.util.log_to_file('paramiko.log')
+    logging.getLogger("paramiko").setLevel(logging.DEBUG)
+    remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+    if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+        printColor("Local branch is on par with remote branch.", "green")
+        sys.exit(0)
 
+    printColor("Pulling changes from remote...", "green")
+    pullDirectory(sftp, remotePath, '.', sep)
+    sftp.close()
+    ssh_client.close()
+    
+    if refs["B"][head["name"]] != head["hash"]:
+        printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
+        opt=None
+        while opt not in ['y', 'n', 'yes', 'no']:
+            print("====================================================================")
+            print(" <> Do you wish to merge remote branch content? (y/n)")
+            print("====================================================================")
+            opt = input("Please provide an option: ").lower()
+            if opt not in ['y', 'n', 'yes', 'no']:
+                printColor("Please provide a valid option!", "red")
+        if opt in ["y", "yes"]:
+            mergeSourceIntoTarget(refs["B"][head["name"]], head["hash"])
+    import fcntl
 
+def pushChanges(args):
+    pass

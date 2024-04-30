@@ -34,7 +34,7 @@ def printCommitData(commit):
     printColor("---------------------------------------------------------------------", "white")
 
 def logSequence(args):
-    head = getResource("HEAD")
+    head = getResource("head")
     currentCommit = load(head["hash"], os.path.join('.cookie', 'objects'))
     trackHistory=[]
     key = None

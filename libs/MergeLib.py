@@ -54,10 +54,10 @@ def fileEditProcess(path):
         phandler.communicate()
     pstatus = get_proc_status(pid)
 
-def mergeSourceIntoTarget(target, sources):
+def mergeSourceIntoTarget(target, source):
     if target == None:
-        target = getResource("HEAD")["name"]
-    createMergeCommit(target, sources)
+        target = getResource("head")["name"]
+    createMergeCommit(target, source)
 
 def mergeBlobs(target, source, base, objectsPath): #the args are hashes
     filename = None
@@ -225,7 +225,7 @@ def createMergeCommit(target, source):
     #generateStatus(None,quiet=True)
     metaData=['C']
     refs=getResource("refs")
-    head=getResource("HEAD")
+    head=getResource("head")
     targetIsHead=False
     targetIsBranchName=False
     if target in refs["B"]:

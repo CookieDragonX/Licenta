@@ -7,22 +7,12 @@ TO DO:
 
 ---- TOP PRIO ----
 
-- setRemoteData
-
-- push
-
-- pull
-
-- clone
-
-- pack
-
-- encrypt data in objects --final
+- push with lock data on remote 
 
 - write more tests
 
-- queue for push command after implementing remote repo
-
 ---- LOW PRIO ----
 
-- everything is top prio!
+- stash/unstash
+
+- encrypt data in objects --final
