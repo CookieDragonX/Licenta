@@ -6,25 +6,13 @@ Cookie File Versioning System</br>
 TO DO:
 
 ---- TOP PRIO ----
- 
-- print refs
 
-- tag
-
-- encrypt data in objects --final
-
-- merging strategies
-
-- ssh connection with server
-
-- cookie undo
+- push with lock data on remote 
 
 - write more tests
 
-- implement log -- curses
-
-- queue for push command after implementing remote repo
-
 ---- LOW PRIO ----
 
-- everything is top prio!
+- stash/unstash
+
+- encrypt data in objects --final

@@ -5,10 +5,10 @@ import shutil
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
-from libs.RemotingManager import editLoginFile
+from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
-from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite
+from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand
 from libs.UndoLib import undoCommand
 from libs.MergeLib import mergeSourceIntoTarget
 from libs.LogsManager import logSequence
@@ -19,6 +19,16 @@ cookieWordArt='''
             \  \__(  <_> |  <_> )    <|  \  ___/ 
              \___  >____/ \____/|__|_ \__|\___  >
                  \/                  \/       \/ 
+'''
+config_template = '''
+{
+    "host":"<hostname>",
+    "port":"<port for ssh (22)>",
+    "remote_user":"<remote username>",
+    "local_ssh_private_key":"<path to local key>",
+    "host_os":"<win32/unix>",
+    "remote_path":"<path to remote repositories>"
+}
 '''
 DEBUG=False  #make manual testing easier, but paradoxically make automated tests fail D:
 
@@ -162,6 +172,74 @@ argsp.add_argument("-b",
                    action='store_true',
                    help="Priority for main branches and not merges.")
 
+#Undo subcommand definition
+argsp = argsubparsers.add_parser("clone", help="Clone remote repository.")
+argsp.add_argument("name",
+                   metavar="name",
+                   default=None,
+                   help="Repository name to clone.")
+argsp.add_argument("-c",
+                   "--config",
+                   metavar="config",
+                   default=None,
+                   help="Path to clone configuration.")
+argsp.add_argument("-p",
+                   "--path",
+                   metavar="path",
+                   default=os.getcwd(),
+                   help="Where to clone the repository.")
+argsp.add_argument("-b",
+                   "--branch",
+                   metavar="branch",
+                   default="master",
+                   help="Branch name to clone.")
+argsp.add_argument("-s",
+                   action='store_true',
+                   help="Option to clone sparsely.")
+
+# Configure remote subcommand definition
+argsp = argsubparsers.add_parser("rconfig", help="Configure remote data.")
+argsp.add_argument("-i",
+                   "--ip",
+                   metavar="hostname",
+                   default=None,
+                   help="Remote hostname(ip).")
+argsp.add_argument("-p",
+                   "--port",
+                   metavar="port",
+                   default=None,
+                   help="Remote hostname port(22).")
+argsp.add_argument("-u",
+                   "--user",
+                   metavar="user",
+                   default=None,
+                   help="Remote username.")
+argsp.add_argument("-s",
+                   "--ssh",
+                   metavar="ssh",
+                   default=None,
+                   help="Path to local ssh private key(C:\\Users\\user\\.ssh\\id_rsa).")
+argsp.add_argument("-o",
+                   "--os",
+                   metavar="os",
+                   default=None,
+                   help="Remote operating system(win32).")
+argsp.add_argument("-r",
+                   "--rpath",
+                   metavar="rpath",
+                   default=None,
+                   help="Remote path to repositories(D:\\CookieRepositories).")
+argsp.add_argument("-n",
+                   "--name",
+                   metavar="name",
+                   default=None,
+                   help="Name of remote repository.")
+
+# Clear subcommand definition
+argsp = argsubparsers.add_parser("clear", help="Clear local data(caches, history).")
+
+# Clear subcommand definition
+argsp = argsubparsers.add_parser("pull", help="Cookie pull changes from remote.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command.")
@@ -204,6 +282,14 @@ def main(argv=sys.argv[1:]):
         log(args)
     elif args.command == 'merge':           # merge two branches/two commits
         merge(args)
+    elif args.command == 'clone':           # clone remote
+        clone(args)
+    elif args.command == 'rconfig':         # configure remote data
+        rconfig(args)
+    elif args.command == 'clear':           # clear local data
+        clear(args)
+    elif args.command == 'pull':            # pull data from remote
+        pull(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -254,6 +340,19 @@ def addToUndoCache(fct, saveResource=[]):
 def init(args):
     print(cookieWordArt)
     createDirectoryStructure(args)
+
+def clone(args):
+    
+    if not args.config :
+        printColor("Please provide a path to a configuration file.", "red")
+        print("     <> Usage:")
+        print("         cookie <repository_name> -c <path_to_config>")
+        print("=============================================================")
+        print("     <> Configuration template:")
+        print(config_template)
+        sys.exit(1)
+    print(cookieWordArt)
+    cloneRepo(args)
 
 @cookieRepoCertified
 def delete(args):
@@ -309,7 +408,7 @@ def delete_tag(args):
 def status(args):
     generateStatus(args, quiet=False)
 
-@addToUndoCache(saveResource=["refs", "index", "HEAD", "logs", "staged"])
+@addToUndoCache(saveResource=["refs", "index", "head", "logs", "staged"])
 @cookieRepoCertified
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
@@ -323,7 +422,7 @@ def login(args):
 def log(args):
     logSequence(args)
 
-@addToUndoCache(saveResource=["refs", "index", "HEAD", "logs", "staged"])
+@addToUndoCache(saveResource=["refs", "index", "head", "logs", "staged"])
 @cookieRepoCertified
 def merge(args):
     mergeSourceIntoTarget(args.target, args.source)
@@ -332,3 +431,16 @@ def merge(args):
 def undo(args):
     undoCommand(args)
 
+@addToUndoCache(saveResource=["remote_config"])
+@cookieRepoCertified
+def rconfig(args):
+    remoteConfig(args)
+
+@cookieRepoCertified
+def clear(args):
+    clearCommand()
+
+@addToUndoCache(saveResource=["logs", "refs"])
+@cookieRepoCertified
+def pull(args):
+    pullChanges(args)

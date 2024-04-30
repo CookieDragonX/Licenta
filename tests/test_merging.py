@@ -37,10 +37,10 @@ def test_merging1(monkeypatch):
     inputs = iter(['T', 'n'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
-    head = getResource("HEAD")
+    head = getResource("head")
     oldHead=head["hash"]
     mergeSourceIntoTarget("master", "secondary_branch")
-    head = getResource("HEAD")
+    head = getResource("head")
     newHead = head["hash"]
     assert oldHead == newHead
 

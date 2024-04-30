@@ -6,7 +6,6 @@ from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, 
 from libs.BasicUtils import getResource, dumpResource
 import shutil
 
-
 def restoreResource(index, resource_name):
     oldResource = getResource(resource_name, specificPath=os.path.join(".cookie", "cache", "undo_cache", str(index)))
     dumpResource(resource_name, oldResource)
@@ -47,6 +46,10 @@ def undoCommand(args):
         undo_merge(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'login':
         undo_login(prevArgs, indexToUndo)
+    elif prevArgs["command"] == 'rconfig':
+        undo_rconfig(prevArgs, indexToUndo)
+    elif prevArgs["command"] == 'pull':
+        undo_pull(prevArgs, indexToUndo)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -94,7 +97,7 @@ def undo_login(args,indexToUndo):
 
 def undo_merge(args, indexToUndo):
     restoreResource(indexToUndo, "refs")
-    restoreResource(indexToUndo, "HEAD")
+    restoreResource(indexToUndo, "head")
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
@@ -102,8 +105,17 @@ def undo_merge(args, indexToUndo):
 
 def undo_commit(args, indexToUndo):
     restoreResource(indexToUndo, "refs")
-    restoreResource(indexToUndo, "HEAD")
+    restoreResource(indexToUndo, "head")
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
+    clearCache(indexToUndo)
+
+def undo_rconfig(args, indexToUndo):
+    restoreResource(indexToUndo, "remote_config")
+    clearCache(indexToUndo)
+
+def undo_pull(args, indexToUndo):
+    restoreResource(indexToUndo, "refs")
+    restoreResource(indexToUndo, "logs")
     clearCache(indexToUndo)

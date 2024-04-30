@@ -8,4 +8,6 @@ def printColor(message, color):
         exit(1)
     if os.name=='nt':
         colorama.init()
+
     print(colored(message, color=color))
+

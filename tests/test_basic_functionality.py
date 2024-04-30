@@ -18,7 +18,7 @@ def test_init():
         shutil.rmtree("Test_Repo")
     subprocess.run(["py", "-3", os.path.join(cookiePath, 'cookie'), "init", "Test_Repo"])
     assert os.path.isdir(os.path.join('Test_Repo', '.cookie', 'objects')) 
-    assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'HEAD')) 
+    assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'head')) 
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'index'))
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'refs'))
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'staged'))
@@ -80,10 +80,10 @@ def test_commit():
         capture_output = True,
         text = True 
     )
-    with open(os.path.join(".cookie", "HEAD"), "r") as file:
-        HEAD=json.load(file)
-    assert HEAD["name"]=="master"
-    assert HEAD["hash"]!=""
+    with open(os.path.join(".cookie", "head"), "r") as file:
+        head=json.load(file)
+    assert head["name"]=="master"
+    assert head["hash"]!=""
 
 def test_add2():
     os.makedirs(os.path.join("dir1", "dir2"))
