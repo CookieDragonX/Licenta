@@ -69,7 +69,7 @@ def undo_remove(args, indexToUndo):
     clearCache(indexToUndo)
 
 def undo_checkout(args,indexToUndo):
-    checkoutSnapshot(args["ref"])
+    checkoutSnapshot(args["ref"])   # this just does checkout again?
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])

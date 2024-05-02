@@ -1,17 +1,8 @@
 import os
-import json
 import subprocess
-import shutil
 from tests.test_branching import test_branching1, test_cleanup
 from libs.MergeLib import mergeSourceIntoTarget
 from libs.BasicUtils import getResource
-###################################################################
-#               Preconditions:
-#
-#   - there should be not directory named 'Test_Repo' as this test
-#       will create it and apply basic commands on it
-#
-##################################################################
 
 cookiePath="D:\\stuffs\\Licenta"
 
