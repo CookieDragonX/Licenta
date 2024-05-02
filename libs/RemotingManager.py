@@ -7,6 +7,7 @@ import os
 from stat import S_ISDIR, S_ISREG
 import sys
 import time
+import traceback
 
 def lockPath(sftp, pathname):
     with sftp.open("{}.lock".format(pathname), 'w') as remote_file:
@@ -63,13 +64,13 @@ def pushDirectory(sftp, localdir, remotedir, sep, ignoreList):
         if entry in ignoreList:
             continue
         if localdir=='.':
-            localpath=entry.filename
+            localpath=entry
         else:
-            localpath = os.path.join(localdir, entry.filename)
+            localpath = os.path.join(localdir, entry)
         if remotedir=='.':
-            localpath=entry.filename
+            localpath=entry
         else:
-            remotepath = sep.join([remotedir, entry.filename])
+            remotepath = sep.join([remotedir, entry])
         mode = entry.st_mode
         if S_ISDIR(mode):
             try:
@@ -115,7 +116,7 @@ def cloneRepo(args):
         sys.exit(1)
 
     sftp = ssh_client.open_sftp()
-    if config["remote_os"] == 'win32':
+    if config["remote_os"] == 'nt':
         sep = '\\'
     else :
         sep = '/'
@@ -173,7 +174,7 @@ def remoteConfig(args):
         rconfig["port"] =input                  (" <> Please provide the port                              : ")
         rconfig["remote_user"] = input          (" <> Please provide the remote user                       : ")
         rconfig["local_ssh_private_key"] = input(" <> Please provide the path to the local private ssh key : ")
-        rconfig["remote_os"] = input            (" <> Please provide the remote OS (win32 for windows)     : ") 
+        rconfig["remote_os"] = input            (" <> Please provide the remote OS (nt for windows)     : ") 
         rconfig["remote_path"] = input          (" <> Please provide the remote path to repositories       : ")
         rconfig["repo_name"] = input            (" <> Please provide the remote name of repository         : ")
         print                                   ("=============================================================")
@@ -182,7 +183,11 @@ def remoteConfig(args):
 
 def pullChanges(args):
     config = getResource("remote_config")
-    private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+    try:
+        private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+    except OSError:
+        printColor("Please configure remote data first!", "red")
+        sys.exit(1)
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
@@ -192,7 +197,7 @@ def pullChanges(args):
         printColor("Check remote host configuration", "red")
         sys.exit(1) 
         
-    if config["remote_os"] == 'win32':
+    if config["remote_os"] == 'nt':
         sep = '\\'
     else :
         sep = '/'
@@ -226,35 +231,51 @@ def pullChanges(args):
             mergeSourceIntoTarget(refs["B"][head["name"]], head["hash"])
 
 def pushChanges(args):
-    config = getResource("remote_config")
-    private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
-    ssh_client = paramiko.SSHClient()
-    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
-        ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
-    except TimeoutError:
-        printColor("Connection attempt timed out!", "red")
-        printColor("Check remote host configuration", "red")
-        sys.exit(1) 
-        
-    if config["remote_os"] == 'win32':
-        sep = '\\'
-    else :
-        sep = '/'
-    sftp = ssh_client.open_sftp()
-    remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
-    if isLocked(sftp, remotePath):
-        printColor("Another user currently pushing.", "blue")
-        printColor("    <> Waiting to finish...")
-    while isLocked(sftp, remotePath):
-        time.sleep(1)
-    lockPath(sftp, remotePath)
-    pushDirectory(sftp, os.path.join(".cookie", "objects"), sep.join([remotePath, ".cookie", "objects"]))
-    sftp.put(os.path.join(".cookie", "refs"), sep.join([remotePath, ".cookie", "refs.bak"]))
-    sftp.put(os.path.join(".cookie", "logs"), sep.join([remotePath, ".cookie", "logs.bak"]))
-    sftp.remove(sep.join([remotePath, ".cookie", "refs"]))
-    sftp.rename(sep.join([remotePath, ".cookie", "refs.bak"]), sep.join([remotePath, ".cookie", "refs"]))
-    sftp.remove(sep.join([remotePath, ".cookie", "logs"]))
-    sftp.rename(sep.join([remotePath, ".cookie", "logs.bak"]), sep.join([remotePath, ".cookie", "logs"]))
-    unlockPath(sftp, remotePath)
-    printColor("Pushed changes to remote", "green")
+        config = getResource("remote_config")
+        try:
+            private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+        except OSError:
+            printColor("Please configure remote data first!", "red")
+            printColor("    <> Use 'cookie rconfig' or edit file at '{}'.".format(os.path.join(".cookie", "remote_config")), "white")
+            sys.exit(1)
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+        try:
+            ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
+        except TimeoutError:
+            printColor("Connection attempt timed out!", "red")
+            printColor("Check remote host configuration", "red")
+            sys.exit(1) 
+        except Exception:
+            printColor("Connection attempt failed!", "red")
+            traceback.print_exc()
+            printColor("Check remote host configuration", "red")
+            sys.exit(1) 
+        if config["remote_os"] == 'nt':
+            sep = '\\'
+        else :
+            sep = '/'
+        sftp = ssh_client.open_sftp()
+        remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
+        if isLocked(sftp, remotePath):
+            printColor("Another user currently pushing.", "blue")
+            printColor("    <> Waiting to finish...", "blue")
+        while isLocked(sftp, remotePath):
+            time.sleep(1)
+        lockPath(sftp, remotePath)
+        pushDirectory(sftp, os.path.join(".cookie", "objects"), sep.join([remotePath, ".cookie", "objects"]), sep, [])
+        sftp.put(os.path.join(".cookie", "refs"), sep.join([remotePath, ".cookie", "refs.bak"]))
+        sftp.put(os.path.join(".cookie", "logs"), sep.join([remotePath, ".cookie", "logs.bak"]))
+        sftp.remove(sep.join([remotePath, ".cookie", "refs"]))
+        sftp.rename(sep.join([remotePath, ".cookie", "refs.bak"]), sep.join([remotePath, ".cookie", "refs"]))
+        sftp.remove(sep.join([remotePath, ".cookie", "logs"]))
+        sftp.rename(sep.join([remotePath, ".cookie", "logs.bak"]), sep.join([remotePath, ".cookie", "logs"]))
+        unlockPath(sftp, remotePath)
+        printColor("Pushed changes to remote", "green")
+    except:
+        unlockPath(sftp, remotePath)
+        traceback.print_exc()
+        printColor("Failed to push changes to remote...", "red")
+        sys.exit(1)

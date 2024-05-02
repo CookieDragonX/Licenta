@@ -15,7 +15,7 @@ _/ ___\/  _ \ /  _ \|  |/ /  |/ __ \   /  ___// __ \_  __ \  \/ // __ \_  __ \
 """
 
 def initializeServer(args):
-    print(cookieServerString)
+    #print(cookieServerString)
     os.chdir(args.path)
     hostname = socket.gethostname()
     IPAddr = socket.gethostbyname(hostname)

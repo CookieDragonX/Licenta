@@ -5,7 +5,7 @@ import shutil
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
-from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges
+from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand
@@ -28,7 +28,7 @@ config_template = '''
     "port":"<port for ssh (22)>",
     "remote_user":"<remote username>",
     "local_ssh_private_key":"<path to local key>",
-    "host_os":"<win32/unix>",
+    "host_os":"<nt/posix>",
     "remote_path":"<path to remote repositories>"
 }
 '''
@@ -228,7 +228,7 @@ argsp.add_argument("-o",
                    "--os",
                    metavar="os",
                    default=None,
-                   help="Remote operating system(win32).")
+                   help="Remote operating system(nt).")
 argsp.add_argument("-r",
                    "--rpath",
                    metavar="rpath",
@@ -244,7 +244,10 @@ argsp.add_argument("-n",
 argsp = argsubparsers.add_parser("clear", help="Clear local data(caches, history).")
 
 # Clear subcommand definition
-argsp = argsubparsers.add_parser("pull", help="Cookie pull changes from remote.")
+argsp = argsubparsers.add_parser("pull", help="Pull changes from remote.")
+
+# Clear subcommand definition
+argsp = argsubparsers.add_parser("push", help="Push changes to remote.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command.")
@@ -295,6 +298,8 @@ def main(argv=sys.argv[1:]):
         clear(args)
     elif args.command == 'pull':            # pull data from remote
         pull(args)
+    elif args.command == 'push':            # pull data from remote
+        push(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -453,3 +458,7 @@ def clear(args):
 @cookieRepoCertified
 def pull(args):
     pullChanges(args)
+
+@cookieRepoCertified
+def push(args):
+    pushChanges(args)
