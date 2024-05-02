@@ -8,5 +8,6 @@ import libs.mainCookieLib as cookie
 #  \___  >____/ \____/|__|_ \__|\___  >   \_/  \___  >____  >
 #      \/                  \/       \/             \/     \/                     
 # 
+# https://patorjk.com/software/taag/#p=display&f=Graffiti&t=cookie
 
 cookie.main()

@@ -7,8 +7,6 @@ TO DO:
 
 ---- TOP PRIO ----
 
-- push with lock data on remote 
-
 - write more tests
 
 ---- LOW PRIO ----
