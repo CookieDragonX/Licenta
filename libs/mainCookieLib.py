@@ -12,6 +12,8 @@ from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource,
 from libs.UndoLib import undoCommand
 from libs.MergeLib import mergeSourceIntoTarget
 from libs.LogsManager import logSequence
+from libs.server.serverSetup import initializeServer
+
 cookieWordArt='''
                                  __   .__        
               ____  ____   ____ |  | _|__| ____  
@@ -44,6 +46,9 @@ argsp.add_argument("path",
                    nargs="?",
                    default=os.getcwd(),
                    help="Where to create the repository.")
+argsp.add_argument("-s",
+                   action='store_true',
+                   help="Initialize server.")
 
 #add subcommand definition
 argsp = argsubparsers.add_parser("add", help="Add a file to staging area.")
@@ -338,8 +343,12 @@ def addToUndoCache(fct, saveResource=[]):
     return inner
 
 def init(args):
-    print(cookieWordArt)
-    createDirectoryStructure(args)
+    
+    if args.s:
+        initializeServer(args)
+    else:
+        print(cookieWordArt)
+        createDirectoryStructure(args)
 
 def clone(args):
     
