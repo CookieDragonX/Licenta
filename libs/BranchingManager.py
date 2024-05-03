@@ -64,7 +64,7 @@ def updateTree(tree, index, objectsPath, action='reset'):
         if action=='reset':
             object=load(hash, objectsPath)
             if object.__class__.__name__=='Blob':
-                safeWrite(path, object.content)
+                safeWrite(path, object.content, binary=True)
                 mode = os.lstat(path)
                 index[path]=statDictionary(mode)
                 index[path]['hash'] = hash

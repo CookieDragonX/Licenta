@@ -183,4 +183,4 @@ def test_delete_and_cleanup():
     )
     assert "Cookie does not assume responsability!" in result.stdout
     os.chdir("..")
-    shutil.rmtree("Test_Repo")
+    #shutil.rmtree("Test_Repo")

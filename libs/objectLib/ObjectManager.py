@@ -31,16 +31,24 @@ def store(object, objectsPath):
 def getHash(path): #only Blob but not really an useful method
     with open(path, 'r+b') as fp:
         fileContent=fp.read()
-    blobContent='?'.join(['B', path, fileContent])
-    return sha1(blobContent.encode(encoding='utf-8'))
+    blobContent=bytearray()
+    blobContent.extend(b'B?')  
+    blobContent.extend(path)
+    blobContent.extend(b'?')
+    blobContent.extend(fileContent)
+    return sha1(blobContent)
 
 def createBlob(path, forcePath=None):
     with open(path, 'r+b') as fp:
         fileContent=fp.read()
+    metaData=bytearray()
+    metaData.extend(b'B?')
     if forcePath:
-        metaData='?'.join(['B', forcePath, str(fileContent)])
+        metaData.extend(forcePath)
     else:
-        metaData='?'.join(['B', path, str(fileContent)])
+        metaData.extend(path)
+    metaData.extend(b'?')
+    metaData.extend(fileContent)
     return Blob(metaData)
 
 def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):
