@@ -7,12 +7,12 @@ TO DO:
 
 ---- TOP PRIO ----
 
-- push with lock data on remote 
-
 - write more tests
+
+- don't allow commits when tag checked out
+
+- undo fixes
 
 ---- LOW PRIO ----
 
 - stash/unstash
-
-- encrypt data in objects --final

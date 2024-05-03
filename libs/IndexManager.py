@@ -8,8 +8,10 @@ from time import time
 from libs.BranchingManager import updateBranchSnapshot
 from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, cacheFile
 from libs.LogsManager import logCommit
+from libs.RemotingManager import getRemoteResource
 from copy import deepcopy
-
+import paramiko
+import traceback    
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
     for file in os.listdir(dir):
@@ -323,9 +325,12 @@ def populateDifferences(dir, index, staged, differences):
                     differences['D'].update({item: statDict})
             continue
         mode = os.lstat(item)
-        itemData=index[item]
+        itemData=deepcopy(index[item])
         del itemData['hash']
-        if itemData!=statDictionary(mode) and not S_ISDIR(mode.st_mode):
+        del itemData['ctime']
+        stats = statDictionary(mode)
+        del stats['ctime']
+        if itemData!=stats and not S_ISDIR(mode.st_mode):
             if item not in staged["M"]:
                 differences['M'].update({item: statDictionary(mode)})
     #check files different to staging area
@@ -400,6 +405,41 @@ def generateStatus(args, quiet=True):
     compareToIndex()
     if not quiet:
         head = getResource("head")
+        refs = getResource("refs")
+        config = getResource("remote_config")
+        try:
+            try:
+                private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+            except OSError:
+                printColor("Please configure remote data first!", "red")
+                sys.exit(1)
+            ssh_client = paramiko.SSHClient()
+            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            try:
+                ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
+            except TimeoutError:
+                printColor("Connection attempt timed out!", "red")
+                traceback.print_exc()
+                printColor("Check remote host configuration", "red")
+                sys.exit(1) 
+                
+            if config["remote_os"] == 'nt':
+                sep = '\\'
+            else :
+                sep = '/'
+            sftp = ssh_client.open_sftp()
+            remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
+            
+            refs = getResource("refs")
+            head = getResource("head")
+            remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+            if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+                printColor("Local branch is on par with remote branch.", "green")
+            else:
+                printColor("Local branch is behind remote branch.", "red")
+                printColor("Please use 'cookie pull' before comitting.", "green")
+        except:
+            printColor("Could not resolve remote, please check configuration.", "red")
         if head['hash']=='':
             printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
         printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")

@@ -1,5 +1,3 @@
-import curses
-from curses import wrapper
 from libs.objectLib.ObjectManager import load
 import os
 from utils.prettyPrintLib import printColor

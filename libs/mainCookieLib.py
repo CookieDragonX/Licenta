@@ -5,13 +5,15 @@ import shutil
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
-from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges
+from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand
 from libs.UndoLib import undoCommand
 from libs.MergeLib import mergeSourceIntoTarget
 from libs.LogsManager import logSequence
+from libs.server.serverSetup import initializeServer
+
 cookieWordArt='''
                                  __   .__        
               ____  ____   ____ |  | _|__| ____  
@@ -26,7 +28,7 @@ config_template = '''
     "port":"<port for ssh (22)>",
     "remote_user":"<remote username>",
     "local_ssh_private_key":"<path to local key>",
-    "host_os":"<win32/unix>",
+    "host_os":"<nt/posix>",
     "remote_path":"<path to remote repositories>"
 }
 '''
@@ -44,6 +46,9 @@ argsp.add_argument("path",
                    nargs="?",
                    default=os.getcwd(),
                    help="Where to create the repository.")
+argsp.add_argument("-s",
+                   action='store_true',
+                   help="Initialize server.")
 
 #add subcommand definition
 argsp = argsubparsers.add_parser("add", help="Add a file to staging area.")
@@ -199,6 +204,12 @@ argsp.add_argument("-s",
 
 # Configure remote subcommand definition
 argsp = argsubparsers.add_parser("rconfig", help="Configure remote data.")
+argsp.add_argument("-f",
+                   "--file",
+                   metavar="file",
+                   required=False,
+                   default=None,
+                   help="Path to config file.")
 argsp.add_argument("-i",
                    "--ip",
                    metavar="hostname",
@@ -223,7 +234,7 @@ argsp.add_argument("-o",
                    "--os",
                    metavar="os",
                    default=None,
-                   help="Remote operating system(win32).")
+                   help="Remote operating system(nt).")
 argsp.add_argument("-r",
                    "--rpath",
                    metavar="rpath",
@@ -239,7 +250,10 @@ argsp.add_argument("-n",
 argsp = argsubparsers.add_parser("clear", help="Clear local data(caches, history).")
 
 # Clear subcommand definition
-argsp = argsubparsers.add_parser("pull", help="Cookie pull changes from remote.")
+argsp = argsubparsers.add_parser("pull", help="Pull changes from remote.")
+
+# Clear subcommand definition
+argsp = argsubparsers.add_parser("push", help="Push changes to remote.")
 
 #Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command.")
@@ -290,6 +304,8 @@ def main(argv=sys.argv[1:]):
         clear(args)
     elif args.command == 'pull':            # pull data from remote
         pull(args)
+    elif args.command == 'push':            # pull data from remote
+        push(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -338,8 +354,12 @@ def addToUndoCache(fct, saveResource=[]):
     return inner
 
 def init(args):
-    print(cookieWordArt)
-    createDirectoryStructure(args)
+    
+    if args.s:
+        initializeServer(args)
+    else:
+        print(cookieWordArt)
+        createDirectoryStructure(args)
 
 def clone(args):
     
@@ -444,3 +464,7 @@ def clear(args):
 @cookieRepoCertified
 def pull(args):
     pullChanges(args)
+
+@cookieRepoCertified
+def push(args):
+    pushChanges(args)

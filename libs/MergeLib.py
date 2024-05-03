@@ -219,7 +219,7 @@ def mergeTrees(target, source, base, objectsPath): # the args are hashes
     store(targetTree, objectsPath)
     return targetTree.getHash()
 
-def createMergeCommit(target, source):
+def createMergeCommit(target, source, commitToBranch=None):
     #check equality of target and source <TO DO>
     objectsPath = os.path.join(".cookie", "objects")
     #generateStatus(None,quiet=True)
@@ -246,7 +246,7 @@ def createMergeCommit(target, source):
         sourceSha=refs["B"][source]
     else:
         sourceSha=source
-    sourceTreeSha=getSnapshotFromCommit(refs["B"][source], objectsPath)
+    sourceTreeSha=getSnapshotFromCommit(sourceSha, objectsPath)
     if getObjectType(sourceSha, objectsPath) != 'C':
         printColor("Cannot merge from '{}' -- not a commit or a branch name".format(target), "red")
     mergeBase=getMergeBase(targetSha, sourceSha)
@@ -294,6 +294,9 @@ def createMergeCommit(target, source):
         newCommit = Commit('?'.join(metaData))
         opt=None
         while opt not in ['y', 'n', 'yes', 'no']:
+            if commitToBranch:
+                target = commitToBranch
+                targetIsBranchName = True
             print("========================================================================")
             print(" <> Do you wish to commit merged content to branch '{}'? (y/n)".format(target))
             print("========================================================================")
