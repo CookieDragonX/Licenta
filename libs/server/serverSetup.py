@@ -1,21 +1,21 @@
 import os
 import socket
-from utils.prettyPrintLib import printColor
 import getpass
 import json
+from utils.prettyPrintLib import printColor
 
 cookieServerString = """
                      __   .__                                                 
   ____  ____   ____ |  | _|__| ____     ______ ______________  __ ___________ 
-_/ ___\/  _ \ /  _ \|  |/ /  |/ __ \   /  ___// __ \_  __ \  \/ // __ \_  __ \
-\  \__(  <_> |  <_> )    <|  \  ___/   \___ \\  ___/|  | \/\   /\  ___/|  | \/
+_/ ___\/  _ \ /  _ \|  |/ /  |/ __ \   /  ___// __ \_  __ \  \/ // __ \_  __ \\
+\  \__(  <_> |  <_> )    <|  \  ___/   \___ \\\\  ___/|  | \/\   /\  ___/|  | \/
  \___  >____/ \____/|__|_ \__|\___  > /____  >\___  >__|    \_/  \___  >__|   
      \/                  \/       \/       \/     \/                 \/       
 
 """
 
 def initializeServer(args):
-    #print(cookieServerString)
+    print(cookieServerString)
     os.chdir(args.path)
     hostname = socket.gethostname()
     IPAddr = socket.gethostbyname(hostname)
@@ -40,3 +40,4 @@ def initializeServer(args):
         fp.seek(0)
         fp.write(json.dumps(config, indent=4))
     printColor("Cookie Server initialized at {}.".format(config["remote_path"]), "green")
+

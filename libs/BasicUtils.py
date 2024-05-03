@@ -76,7 +76,7 @@ def createDirectoryStructure(args):
         safeWrite(os.path.join(project_dir, "unstaged"), {"A":{},"D":{},"M":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "head"), {"name":"master","hash":""}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "userdata"), {"user":"", "email":""}, jsonDump=True)
-        safeWrite(os.path.join(project_dir, "remote_config"), {"host":"<hostname>","port":"<port for ssh (22)>","remote_user":"<remote username>","local_ssh_private_key":"<path to local key>","host_os":"<win32/unix>","remote_path":"<path to remote repositories>"}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "remote_config"), {"host":"<hostname>","port":"<port for ssh (22)>","remote_user":"<remote username>","local_ssh_private_key":"<path to local key>","host_os":"<nt/posix>","remote_path":"<path to remote repositories>"}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "history"), {"index":0,"commands":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "logs"), {"adj":{}, "nodes":{}, "edges":{}, "edge_index":0}, jsonDump=True)

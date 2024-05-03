@@ -204,6 +204,12 @@ argsp.add_argument("-s",
 
 # Configure remote subcommand definition
 argsp = argsubparsers.add_parser("rconfig", help="Configure remote data.")
+argsp.add_argument("-f",
+                   "--file",
+                   metavar="file",
+                   required=False,
+                   default=None,
+                   help="Path to config file.")
 argsp.add_argument("-i",
                    "--ip",
                    metavar="hostname",
