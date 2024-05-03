@@ -232,7 +232,7 @@ def pullChanges(args):
         printColor("Local branch is on par with remote branch.", "green")
         sys.exit(0)
 
-    printColor("Pulling changes from remote...", "green")
+    printColor("Pulling changes from remote, please wait...", "green")
     pullDirectory(sftp, remotePath, '.', sep)
     sftp.close()
     ssh_client.close()
@@ -280,12 +280,16 @@ def pushChanges(args):
         sep = '/'
     sftp = ssh_client.open_sftp()
     remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
-    remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
     refs = getResource("refs")
     head = getResource("head")
-    if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
-        printColor("Local branch is on par with remote branch.", "green")
-        sys.exit(0)
+    try:
+        remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+        if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+            printColor("Local branch is on par with remote branch.", "green")
+            sys.exit(0)
+    except FileNotFoundError:
+        printColor("This is the first push.", "green")
+
     try: 
         sftp.mkdir(remotePath)
         sftp.mkdir(sep.join([remotePath, ".cookie"]))
@@ -299,6 +303,7 @@ def pushChanges(args):
         time.sleep(1)
     try:
         lockPath(sftp, remotePath)
+        printColor("Pushing objects, please wait...", "green")
         pushDirectory(sftp, os.path.join(".cookie", "objects"), sep.join([remotePath, ".cookie", "objects"]), sep, [])
         sftp.put(os.path.join(".cookie", "refs"), sep.join([remotePath, ".cookie", "refs.bak"]))
         sftp.put(os.path.join(".cookie", "logs"), sep.join([remotePath, ".cookie", "logs.bak"]))

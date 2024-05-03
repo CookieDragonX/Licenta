@@ -147,7 +147,7 @@ def resolveAddedStaging(pathname, staged, index):
                 del staged['D'][item]
             else:
                 oldObject=load(index[item]['hash'], os.path.join('.cookie', 'objects'))
-                with open(pathname, "r") as newFile:
+                with open(pathname, "r+b") as newFile:
                     newFileContent=newFile.read()
                 if newFileContent==oldObject.content:
                     # File renamed, delete stuff from where it was and add to 'R'
@@ -168,7 +168,7 @@ def resolveAddedStaging(pathname, staged, index):
         del indexCopy[item]['hash']
         if indexCopy[item] == stagedAddedPathCopy:
             oldObject=load(index[item]['hash'], os.path.join('.cookie', 'objects'))
-            with open(pathname, "r") as newFile:
+            with open(pathname, "r+b") as newFile:
                 newFileContent=newFile.read()
             if newFileContent==oldObject.content:
                 # File renamed, delete stuff from where it was and add to 'C'
@@ -209,7 +209,7 @@ def resolveDeletedStaging(pathname, staged, index):
                 del staged['D'][item]
             else:
                 oldObject=load(os.path.join(index[staged['A']]['hash'], '.cookie', 'objects'))
-                with open(pathname, "r") as newFile:
+                with open(pathname, "r+b") as newFile:
                     newFileContent=newFile.read()
                 if newFileContent==oldObject.content:
                     # File renamed, delete stuff from where it was and add to 'R'
@@ -226,7 +226,7 @@ def resolveModifiedStaging(pathname, staged, index):
         oldStats=deepcopy(index[pathname])
         recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
-        with open(pathname, 'r') as fp:
+        with open(pathname, 'r+b') as fp:
             newContent=fp.read()
         if recordedBlob.content==newContent:
             if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
@@ -250,7 +250,7 @@ def resolveModifiedStaging(pathname, staged, index):
                     del staged['D'][item]
                 else:
                     oldObject=load(index[item]['hash'], os.path.join('.cookie', 'objects'))
-                    with open(pathname, "r") as newFile:
+                    with open(pathname, "r+b") as newFile:
                         newFileContent=newFile.read()
                     if newFileContent==oldObject.content:
                         # File renamed, delete stuff from where it was and add to 'R'
@@ -279,7 +279,7 @@ def resolveModifiedStaging(pathname, staged, index):
         oldStats=deepcopy(index[pathname])
         recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
-        with open(pathname, 'r') as fp:
+        with open(pathname, 'r+b') as fp:
             newContent=fp.read()
         if recordedBlob.content==newContent:
             if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
@@ -440,6 +440,7 @@ def generateStatus(args, quiet=True):
                 printColor("Please use 'cookie pull' before comitting.", "green")
         except:
             printColor("Could not resolve remote, please check configuration.", "red")
+            printColor("Unless this is before first push, in which case all is good!", "red")
         if head['hash']=='':
             printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
         printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")

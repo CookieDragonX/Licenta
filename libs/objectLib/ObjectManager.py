@@ -29,18 +29,18 @@ def store(object, objectsPath):
     safeWrite(os.path.join(objectsPath, id[:2], id[2:]), object.getMetaData(), binary=True)
 
 def getHash(path): #only Blob but not really an useful method
-    with open(path, 'r') as fp:
+    with open(path, 'r+b') as fp:
         fileContent=fp.read()
     blobContent='?'.join(['B', path, fileContent])
     return sha1(blobContent.encode(encoding='utf-8'))
 
 def createBlob(path, forcePath=None):
-    with open(path, 'r') as fp:
+    with open(path, 'r+b') as fp:
         fileContent=fp.read()
     if forcePath:
-        metaData='?'.join(['B', forcePath, fileContent])
+        metaData='?'.join(['B', forcePath, str(fileContent)])
     else:
-        metaData='?'.join(['B', path, fileContent])
+        metaData='?'.join(['B', path, str(fileContent)])
     return Blob(metaData)
 
 def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):
@@ -52,7 +52,7 @@ def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):
     return metaData.split('?')[0]
 
 def getMetaData(hash,objectsPath):
-    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r') as object:
+    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r+b') as object:
         return object.read().decode(encoding='utf-8')
     
 def hashTree(dir, objectsPath):

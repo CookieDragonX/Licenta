@@ -120,7 +120,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             printColor("Resolving conflict for '{}'...".format(filename), "blue")
             cacheFile(filename, cacheType="merge", fileContent=mergedContent)
             fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
-            with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r") as editedContent:
+            with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
                 mergedContent=editedContent.read()
     metaData.append(mergedContent) 
     newBlob = Blob('?'.join(metaData))

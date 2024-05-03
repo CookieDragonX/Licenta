@@ -163,7 +163,7 @@ def printUnstaged():
     
 def cacheFile(pathname, cacheType='index', fileContent=None):
     if not fileContent:
-        with open(pathname, 'r') as fileToCache:
+        with open(pathname, 'r+b') as fileToCache:
             fileContent=fileToCache.read()
 
     if cacheType not in ['undo', 'merge', 'index']:
@@ -171,7 +171,7 @@ def cacheFile(pathname, cacheType='index', fileContent=None):
         sys.exit(1)
     else:
         cacheTypeDir = "{}_cache".format(cacheType)
-    safeWrite(os.path.join('.cookie', 'cache', cacheTypeDir, pathname), fileContent)
+    safeWrite(os.path.join('.cookie', 'cache', cacheTypeDir, pathname), fileContent, binary=True)
 
 
 def clearCommand():
