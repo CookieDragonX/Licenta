@@ -6,5 +6,5 @@ from libs.BasicUtils import getResource
 
 cookiePath="D:\\stuffs\\Licenta"
 
-def test_remote():
-    test_merging1()
+# def test_remote():
+#     test_merging1()

@@ -10,10 +10,11 @@ def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
     else:
+        with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r') as object:
+            objectType=object.read(1)
         with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
+            object.seek(0)
             metaData=object.read()
-        metaData=metaData.decode(encoding='utf-8')
-        objectType=metaData.split('?')[0]
         if objectType=='B':
             return Blob(metaData)
         elif objectType=='C':
@@ -31,25 +32,24 @@ def store(object, objectsPath):
 def getHash(path): #only Blob but not really an useful method
     with open(path, 'r+b') as fp:
         fileContent=fp.read()
-    blobContent='?'.join(['B', path, fileContent])
+    blobContent=b'?'.join([b'B', bytes(path, "utf-8"), fileContent])
     return sha1(blobContent.encode(encoding='utf-8'))
 
 def createBlob(path, forcePath=None):
     with open(path, 'r+b') as fp:
         fileContent=fp.read()
     if forcePath:
-        metaData='?'.join(['B', forcePath, str(fileContent)])
+        metaData=b'?'.join([b'B', bytes(forcePath, "utf-8"), fileContent])
     else:
-        metaData='?'.join(['B', path, str(fileContent)])
+        metaData=b'?'.join([b'B', bytes(path, "utf-8"), fileContent])
     return Blob(metaData)
 
 def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
-    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
-        metaData=object.read()
-    metaData=metaData.decode(encoding='utf-8')
-    return metaData.split('?')[0]
+    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r') as object:
+        objType=object.read(1)
+    return objType
 
 def getMetaData(hash,objectsPath):
     with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r+b') as object:
