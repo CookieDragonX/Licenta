@@ -7,18 +7,18 @@ import os
 class Blob(Object):
     def __init__(self,metaData) -> None:
         if metaData != None:
-            try:
-                metaDataDecoded=metaData.decode(encoding='utf-8')
-            except AttributeError:
-                metaDataDecoded=metaData
-            metaDataSplit=metaDataDecoded.split('?')
-            self.filenameAbsPath=metaDataSplit[1]           # split with '/'
-            self.filename = os.sep.join(self.filenameAbsPath.split("/"))
-            self.content='?'.join(metaDataSplit[2:])
+            metaDataSplit=metaData.split(b'?')
+            filenameAbsPath=metaDataSplit[1]           # split with '/'
+            self.filename = os.sep.join(filenameAbsPath.decode('utf-8').split("/"))
+            self.content=b'?'.join(metaDataSplit[2:])
         else :
-            self.filenameAbsPath = ""
             self.filename = ""
-            self.content = ""
+            self.content = bytearray()
     def getMetaData(self):
-        return ('B?{}?{}'.format("/".join(self.filename.split(os.sep)),self.content)).encode('utf-8')
+        bytes = bytearray()
+        bytes.extend(b'B?')
+        bytes.extend(("/".join(self.filename.split(os.sep))).encode('utf-8'))
+        bytes.extend(b'?')
+        bytes.extend(self.content)
+        return bytes
 

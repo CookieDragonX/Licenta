@@ -157,7 +157,7 @@ def resolveAddedStaging(pathname, staged, index):
                     staged['R'][pathname].append(item)
                     staged['R'][pathname].append(statDictionary(os.lstat(pathname)))
                     return
-    #check for copied files WIP
+    #check for copied files
     stagedAddedPathCopy=deepcopy(staged['A'][pathname])
     del stagedAddedPathCopy['mtime']
     del stagedAddedPathCopy['ctime']
