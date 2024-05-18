@@ -37,8 +37,12 @@ def get_proc_status(pid):
     return proc_status
 
 def fileEditProcess(path):
+    if os.name == "posix":
+        editorName = "vim"
+    else:
+        editorName = "notepad"
     if shutil.which("notepad"):
-        phandler = subprocess.Popen(["notepad", path])
+        phandler = subprocess.Popen([editorName, path])
     elif "EDITOR" in os.environ:
         phandler = subprocess.Popen([os.environ["EDITOR"], path])
     pid = phandler.pid

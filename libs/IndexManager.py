@@ -6,12 +6,12 @@ from libs.objectLib.Commit import Commit
 from utils.prettyPrintLib import printColor
 from time import time
 from libs.BranchingManager import updateBranchSnapshot
-from libs.BasicUtils import statDictionary, printStaged, printUnstaged, dumpResource, getResource, cacheFile
+from libs.BasicUtils import statDictionary, dumpResource, getResource, cacheFile
 from libs.LogsManager import logCommit
 from libs.RemotingManager import getRemoteResource
 from copy import deepcopy
 import paramiko
-import traceback    
+import traceback
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
     for file in os.listdir(dir):
@@ -557,3 +557,61 @@ def isThereStagedStuff():
     staged=getResource("staged")
     if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
         return True
+    
+def printStaged():
+    staged=getResource("staged")
+    if staged['A']!={} or staged['D']!={} or staged['M']!={} or staged['C']!={} or staged['R']!={} or staged['T']!={} or staged['X']!={}:
+        printColor("-----------------------------------------------------------------", "white")
+        printColor("    <> Changes to be committed:","white")
+        if staged['A']!={}:
+            printColor("-->Files added:",'green')
+            print(*["   {}".format(file) for file in staged['A']], sep=os.linesep)
+        if staged['D']!={}:
+            printColor("-->Files deleted:",'green')
+            print(*["   {}".format(file) for file in staged['D']], sep=os.linesep)
+        if staged['M']!={}:
+            printColor("-->Files modified:",'green')
+            print(*["   {}".format(file) for file in staged['M']], sep=os.linesep)
+        if staged['C']!={}:
+            printColor("-->Files copied:",'green')
+            print(*["   {} <-- {}".format(file, staged['C'][file][0]) for file in staged['C']], sep=os.linesep)
+        if staged['R']!={}:
+            moved=dict()
+            for item in staged['R']:
+                if os.path.basename(item)==os.path.basename(staged['R'][item][0]):
+                    moved[item]=staged['R'][item]
+            if len(moved) > 0 :
+                printColor("-->Files moved:",'green')
+                print(*["   {} --> {}".format(moved[file][0], file) for file in moved], sep=os.linesep)
+            if len(moved) < len(staged['R']):
+                printColor("-->Files renamed:",'green')
+                print(*["   {} --> {}".format(staged['R'][file][0], file) if file not in moved else "" for file in staged['R']], sep=os.linesep)
+        if staged['T']!={}:
+            printColor("-->Files with type changes:",'green')
+            print(*["   {}".format(file) for file in staged['T']], sep=os.linesep)
+        if staged['X']!={}:
+            printColor("-->Files with unknown modifications:",'green')
+            print(*["   {}".format(file) for file in staged['X']], sep=os.linesep)
+        printColor("-----------------------------------------------------------------", "white")
+        return True
+    return False
+
+def printUnstaged():
+    unstaged=getResource("unstaged")
+    if unstaged['A']!={} or unstaged['D']!={} or unstaged['M']!={}:
+        printColor("-----------------------------------------------------------------", "white")
+        printColor("    <> Unstaged changes:","white")
+        if unstaged['A']!={}:
+            printColor("-->Files untracked:",'red')
+            print(*["   {}".format(file) for file in unstaged['A']], sep=os.linesep)
+        if unstaged['D']!={}:
+            printColor("-->Files deleted:",'red')
+            print(*["   {}".format(file) for file in unstaged['D']], sep=os.linesep)
+        if unstaged['M']!={}:
+            printColor("-->Files modified:",'red')
+            print(*["   {}".format(file) for file in unstaged['M']], sep=os.linesep)
+        printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        printColor("-----------------------------------------------------------------", "white")
+        return True
+    return False
+    

@@ -10,9 +10,8 @@ def load(hash, objectsPath):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
     else:
-        with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r') as object:
-            objectType=object.read(1)
         with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
+            objectType=object.read(1).decode()
             object.seek(0)
             metaData=object.read()
         if objectType=='B':
@@ -69,4 +68,6 @@ def hashTree(dir, objectsPath):
 
 def getSnapshotFromCommit(hash, objectsPath):
     commit=load(hash, objectsPath)
+    print(hash)
+    print(commit.getMetaData())
     return commit.snapshot

@@ -57,5 +57,5 @@ def test_undo_commit():
     assert "something.txt" in staged["A"]
     assert head["hash"] == oldCommit
 
-def test_clean_undo():
-    test_cleanup()
+# def test_clean_undo():
+#     test_cleanup()
