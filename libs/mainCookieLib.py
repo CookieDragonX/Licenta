@@ -99,7 +99,7 @@ argsp.add_argument("path",
 #Checkout subcommand definition
 argsp = argsubparsers.add_parser("checkout", help="Checkout a previous snapshot.")
 argsp.add_argument("ref",
-                   metavar="directory",
+                   metavar="ref",
                    nargs="?",
                    default=None,
                    help="Hash or branch to checkout.")
@@ -397,7 +397,7 @@ def remove(args):
     generateStatus(args, quiet=True)
     unstageFiles(args.paths)
 
-@addToUndoCache()
+@addToUndoCache(saveResource=["head"])
 @cookieRepoCertified
 def checkout(args):
     checkoutSnapshot(args)

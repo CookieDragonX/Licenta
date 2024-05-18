@@ -64,7 +64,7 @@ def updateTree(tree, index, objectsPath, action='reset'):
         if action=='reset':
             object=load(hash, objectsPath)
             if object.__class__.__name__=='Blob':
-                safeWrite(path, object.content)
+                safeWrite(path, object.content, binary=True)
                 mode = os.lstat(path)
                 index[path]=statDictionary(mode)
                 index[path]['hash'] = hash
@@ -101,9 +101,12 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         elif checkout:
             checkoutSnapshot(None, ref)
         refs=getResource("refs")
-        if branchName in refs["B"].keys():
-            #printColor("Branch name '{}' already exists!".format(branchName), "red")
-            raise BranchExistsException("Branch already exists")
+        if branchName in refs["T"].keys():
+            printColor("Tag name '{}' already exists!".format(branchName), "red")
+            sys.exit(1)
+        elif branchName in refs["B"].keys():
+            printColor("Branch name '{}' already exists!".format(branchName), "red")
+            sys.exit(1)
         else:
             refs["B"][branchName]=ref
         dumpResource("refs", refs)
@@ -126,8 +129,11 @@ def createTag(tagName, currentRef=True, ref=None, checkout=False):
                 checkoutSnapshot(None, ref)
         refs=getResource("refs")
         if tagName in refs["T"].keys():
-            #printColor("Branch name '{}' already exists!".format(branchName), "red")
-            raise BranchExistsException("Tag already exists")
+            printColor("Tag name '{}' already exists!".format(tagName), "red")
+            sys.exit(1)
+        elif tagName in refs["B"].keys():
+            printColor("Branch name '{}' already exists!".format(tagName), "red")
+            sys.exit(1)
         else:
             refs["T"][tagName]=ref
         dumpResource("refs", refs)
@@ -150,6 +156,7 @@ def deleteBranch(branchName):
     undoInfo=refs['B'][branchName]
     if head["name"]==branchName:
         head["name"] = "DETACHED"
+    refs['D'][branchName] = refs['B'][branchName]
     del refs['B'][branchName]
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
@@ -167,6 +174,7 @@ def deleteTag(tagName):
     undoInfo=refs['T'][tagName]
     if head["name"]==tagName:
         head["name"] = "DETACHED"
+    refs['D'][tagName] = refs['T'][tagName]
     del refs['T'][tagName]
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)

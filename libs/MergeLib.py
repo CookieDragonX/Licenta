@@ -37,8 +37,12 @@ def get_proc_status(pid):
     return proc_status
 
 def fileEditProcess(path):
+    if os.name == "posix":
+        editorName = "vim"
+    else:
+        editorName = "notepad"
     if shutil.which("notepad"):
-        phandler = subprocess.Popen(["notepad", path])
+        phandler = subprocess.Popen([editorName, path])
     elif "EDITOR" in os.environ:
         phandler = subprocess.Popen([os.environ["EDITOR"], path])
     pid = phandler.pid
@@ -85,12 +89,45 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
     else:
         baseBlob = load(base, objectsPath)
     
-    metaData=["B"]
-    metaData.append(filename)
+    metaData=[b"B"]
+    metaData.append(filename.encode('utf-8'))
+    dataIsBinary = False
+    try:
+        sourceString = sourceBlob.content.decode('utf-8')
+    except UnicodeDecodeError:
+        dataIsBinary = True
+    try:
+        targetString = targetBlob.content.decode('utf-8')
+    except UnicodeDecodeError:
+        dataIsBinary = True
+    try:
+        baseString = baseBlob.content.decode('utf-8')
+    except UnicodeDecodeError:
+        dataIsBinary = True
 
-    mergedContent, hasConflict = merge(sourceBlob.content, targetBlob.content, baseBlob.content)
+    if dataIsBinary:
+        printColor("Found conflict in file '{}'.".format(filename), "red")
+        opt = None
+        while opt not in ['t', 's', 'm', 'q']:
+            print("========================================================================")
+            print     (" <> Options:")
+            print     ("    [t] --> Choose content of merge target.")
+            print     ("    [s] --> Choose content of merge source.")
+            printColor("    [q] --> Quit merging...", "red")
+            print("========================================================================")
+        if opt == 'q':
+            printColor(" <> Aborting merge...", "red", "red")
+            sys.exit(1)
+        elif opt == 't':
+            printColor(" <> '{}' file receives target content...".format(filename), "blue")
+            mergedContent = targetBlob.content
+        elif opt == 's':
+            printColor(" <> '{}' file receives source content...".format(filename), "blue")
+            mergedContent = sourceBlob.content
+    else:
+        mergedContent, hasConflict = merge(sourceString, targetString, baseString)
 
-    if hasConflict:
+    if hasConflict and not dataIsBinary:
         printColor("Found conflict in file '{}'.".format(filename), "red")
         opt = None
         while opt not in ['t', 's', 'm', 'q']:
@@ -106,7 +143,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             if opt not in ['t', 's', 'm', 'q']:
                 printColor("Please choose a valid option!", "red")
             if opt == 'h':
-                print(_unidiff_output(sourceBlob.content, targetBlob.content))
+                print(_unidiff_output(sourceString, targetString))
         if opt == 'q':
             printColor(" <> Aborting merge...", "red", "red")
             sys.exit(1)
@@ -120,10 +157,10 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             printColor("Resolving conflict for '{}'...".format(filename), "blue")
             cacheFile(filename, cacheType="merge", fileContent=mergedContent)
             fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
-            with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r") as editedContent:
+            with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
                 mergedContent=editedContent.read()
     metaData.append(mergedContent) 
-    newBlob = Blob('?'.join(metaData))
+    newBlob = Blob(b'?'.join(metaData))
     store(newBlob, objectsPath)
     return newBlob.getHash()
 
