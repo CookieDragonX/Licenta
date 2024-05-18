@@ -3,14 +3,6 @@ import json
 import subprocess
 import shutil
 
-###################################################################
-#               Preconditions:
-#
-#   - there should be not directory named 'Test_Repo' as this test
-#       will create it and apply basic commands on it
-#
-##################################################################
-
 cookiePath="D:\\stuffs\\Licenta"
 
 def test_branching1():

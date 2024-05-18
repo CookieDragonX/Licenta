@@ -69,7 +69,11 @@ def undo_remove(args, indexToUndo):
     clearCache(indexToUndo)
 
 def undo_checkout(args,indexToUndo):
-    checkoutSnapshot(args["ref"])   # this just does checkout again?
+    oldHead = getResource("head", specificPath=os.path.join(".cookie", "cache", "undo_cache", str(indexToUndo)))
+    if oldHead["name"]=='DETACHED':
+        checkoutSnapshot(oldHead["hash"])
+    else:
+        checkoutSnapshot(oldHead["name"])
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
