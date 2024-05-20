@@ -1,10 +1,16 @@
 import os
 import subprocess
-from tests.test_branching import test_branching1, test_cleanup
+from tests.test_branching import test_branching1
 from libs.MergeLib import mergeSourceIntoTarget
 from libs.BasicUtils import getResource
+import shutil 
 
-cookiePath="D:\\stuffs\\Licenta"
+if os.name == 'nt':
+    interpreter = ["py", "-3"]
+else:
+    interpreter = ["python3"]
+
+cookiePath=os.getcwd()
 
 def test_merging1(monkeypatch):
     # at the end of test_branching1() we are on master with one commit
@@ -13,12 +19,12 @@ def test_merging1(monkeypatch):
         file.seek(0)
         file.write("content content")
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", "newFile.txt"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", "newFile.txt"]
     )
 
     # commit on secondary branch
     result=subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "added new file"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "added new file"],
         capture_output=True,
         text=True
     )
@@ -45,4 +51,11 @@ def test_merging1(monkeypatch):
     assert content == "something new"
 
 def test_clean_merge():
-    test_cleanup()
+    result = subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
+        capture_output = True,
+        text = True 
+    )
+    assert "Cookie does not assume responsability!" in result.stdout
+    os.chdir(cookiePath)
+    shutil.rmtree("Test_Repo")

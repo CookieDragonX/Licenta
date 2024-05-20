@@ -4,7 +4,11 @@ from tests.test_merging import test_merging1
 from libs.MergeLib import mergeSourceIntoTarget
 from libs.BasicUtils import getResource
 
-cookiePath="D:\\stuffs\\Licenta"
+if os.name == 'nt':
+    interpreter = ["py", "-3"]
+else:
+    interpreter = ["python3"]
 
-# def test_remote():
-#     test_merging1()
+
+cookiePath=os.getcwd()
+

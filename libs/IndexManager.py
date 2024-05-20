@@ -49,6 +49,7 @@ def createCommit(args, DEBUG=False):
         printColor("There is noting to commit...", "blue")
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
         sys.exit(1) 
+    
     metaData=['C']
     head=getResource("head")
     if head["hash"] == "" :
@@ -410,40 +411,42 @@ def generateStatus(args, quiet=True):
         head = getResource("head")
         refs = getResource("refs")
         config = getResource("remote_config")
-        try:
+        if args.s:
             try:
-                private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
-            except OSError:
-                printColor("Please configure remote data first!", "red")
-                sys.exit(1)
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            try:
-                ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
-            except TimeoutError:
-                printColor("Connection attempt timed out!", "red")
-                traceback.print_exc()
-                printColor("Check remote host configuration", "red")
-                sys.exit(1) 
+                try:
+                    private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+                except OSError:
+                    printColor("Please configure remote data first!", "red")
+                    sys.exit(1)
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                try:
+                    ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
+                except TimeoutError:
+                    printColor("Connection attempt timed out!", "red")
+                    traceback.print_exc()
+                    printColor("Check remote host configuration", "red")
+                    sys.exit(1) 
+                    
+                if config["remote_os"] == 'nt':
+                    sep = '\\'
+                else :
+                    sep = '/'
+                sftp = ssh_client.open_sftp()
+                remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
                 
-            if config["remote_os"] == 'nt':
-                sep = '\\'
-            else :
-                sep = '/'
-            sftp = ssh_client.open_sftp()
-            remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
-            
-            refs = getResource("refs")
-            head = getResource("head")
-            remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
-            if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
-                printColor("Local branch is on par with remote branch.", "green")
-            else:
-                printColor("Local branch is behind remote branch.", "red")
-                printColor("Please use 'cookie pull' before comitting.", "green")
-        except:
-            printColor("Could not resolve remote, please check configuration.", "red")
-            printColor("Unless this is before first push, in which case all is good!", "red")
+                refs = getResource("refs")
+                head = getResource("head")
+                remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+                if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+                    printColor("Local branch is on par with remote branch.", "green")
+                else:
+                    printColor("Local branch is behind remote branch.", "red")
+                    printColor("Please use 'cookie pull' before comitting.", "green")
+            except:
+                printColor("Could not resolve remote, please check configuration.", "red")
+                printColor("Unless this is before first push, in which case all is good!", "red")
+        
         if head['hash']=='':
             printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
         else:

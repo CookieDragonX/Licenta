@@ -238,7 +238,7 @@ def pullChanges(args):
     ssh_client.close()
     
     refs = getResource("refs")
-    if refs["B"][head["name"]] != head["hash"]: # something here
+    if refs["B"][head["name"]] != head["hash"]:             # doesn't make sense, need to somehow merge logs if we want to use merge function
         printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
         opt=None
         while opt not in ['y', 'n', 'yes', 'no']:
@@ -247,7 +247,7 @@ def pullChanges(args):
             print("====================================================================")
             opt = input("Please provide an option: ").lower()
             if opt not in ['y', 'n', 'yes', 'no']:
-                printColor("Please provide a valid option!", "red")
+                printColor("Please provide a valid option!", "red") 
         if opt in ["y", "yes"]:
             mergeSourceIntoTarget(refs["B"][head["name"]], head["hash"], commitToBranch = head["name"])
 

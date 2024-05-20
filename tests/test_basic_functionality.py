@@ -3,20 +3,19 @@ import json
 import subprocess
 import shutil
 from libs.BasicUtils import getResource
-###################################################################
-#               Preconditions:
-#
-#   - there should be not directory named 'Test_Repo' as this test
-#       will create it and apply basic commands on it
-#   
-##################################################################
 
-cookiePath="D:\\stuffs\\Licenta"
+if os.name == 'nt':
+    interpreter = ["py", "-3"]
+else:
+    interpreter = ["python3"]
+
+cookiePath=os.getcwd()
+
 
 def test_init():
     if os.path.exists("Test_Repo"):
         shutil.rmtree("Test_Repo")
-    subprocess.run(["py", "-3", os.path.join(cookiePath, 'cookie'), "init", "Test_Repo"])
+    subprocess.run(interpreter + [os.path.join(cookiePath, 'cookie'), "init", "Test_Repo"])
     assert os.path.isdir(os.path.join('Test_Repo', '.cookie', 'objects')) 
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'head')) 
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'index'))
@@ -29,7 +28,7 @@ def test_init():
 def test_status():
     os.chdir("Test_Repo")
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
@@ -37,7 +36,7 @@ def test_status():
     with open("file.txt", 'w') as file:
         file.write("dummy content")
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
@@ -47,12 +46,12 @@ def test_status():
 
 def test_add():
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", "file.txt"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", "file.txt"],
         capture_output = True,
         text = True 
     )
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
@@ -64,7 +63,7 @@ def test_login():
     test_user="Awesome_User"
     test_email="totally_valid_address@gmail.com"
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "login", "-u", test_user, "-e", test_email],
+        interpreter + [ os.path.join(cookiePath, 'cookie'), "login", "-u", test_user, "-e", test_email],
         capture_output = True,
         text = True 
     )
@@ -76,7 +75,7 @@ def test_login():
 
 def test_commit():
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Added file.txt"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "Added file.txt"],
         capture_output = True,
         text = True 
     )
@@ -90,14 +89,14 @@ def test_add2():
     with open(os.path.join("dir1", "dir2", "nestedFile"), "w") as fp:
         fp.write("some stuff")
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("dir1", "dir2", "nestedFile")],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", os.path.join("dir1", "dir2", "nestedFile")],
     )
     os.remove("file.txt")
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("file.txt")],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", os.path.join("file.txt")],
     )
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
@@ -107,7 +106,7 @@ def test_add2():
 
 def test_commit2():
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "Removed file.txt& added nested file"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "Removed file.txt& added nested file"],
     )
     with open(os.path.join(".cookie", "index"), "r") as indexFile:
         index=json.load(indexFile)
@@ -118,15 +117,15 @@ def test_modified():
     with open(os.path.join("blah.txt"), "w") as testFile:
         testFile.write("content")
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("blah.txt")],
+        interpreter + [ os.path.join(cookiePath, 'cookie'), "add", os.path.join("blah.txt")],
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "add blah.txt."],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "add blah.txt."],
     )
     with open(os.path.join("blah.txt"), "w") as testFile:
         testFile.write("should appear as modified.")
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
@@ -137,20 +136,20 @@ def test_renamed():
         testFile.write("content")
     os.rename('blah.txt', 'new.txt')
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("blah.txt")],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", os.path.join("blah.txt")],
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("new.txt")],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", os.path.join("new.txt")],
     )
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
     assert "-->Files renamed:" in result.stdout
     assert "{} --> {}".format("blah.txt", "new.txt") in result.stdout
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "rename blah.txt to new.txt"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "rename blah.txt to new.txt"],
     )
     index = getResource("index")
     assert "blah.txt" not in index
@@ -162,25 +161,25 @@ def test_copied():
         testFile.write("content")
 
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", os.path.join("somedir", "new_copy.txt")],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", os.path.join("somedir", "new_copy.txt")],
     )
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
         capture_output = True,
         text = True 
     )
     assert "-->Files copied:" in result.stdout
     assert "{} <-- {}".format(os.path.join("somedir", "new_copy.txt"), "new.txt") in result.stdout
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "copy new.txt to somedir"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "copy new.txt to somedir"],
     )
 
-def test_delete_and_cleanup():
+def test_cleanup_basic():
     result = subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "delete"],
+        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
         capture_output = True,
         text = True 
     )
     assert "Cookie does not assume responsability!" in result.stdout
-    os.chdir("..")
+    os.chdir(cookiePath)
     shutil.rmtree("Test_Repo")

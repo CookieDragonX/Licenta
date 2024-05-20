@@ -64,6 +64,9 @@ argsp.add_argument("paths",
 
 #status subcommand definition
 argsp = argsubparsers.add_parser("status", help="Report the status of the current cookie repository.")
+argsp.add_argument("-s",
+                   action='store_true',
+                   help="Check remote status")
 
 #commit subcommand definition
 argsp = argsubparsers.add_parser("commit", help="Commit your changes.")
