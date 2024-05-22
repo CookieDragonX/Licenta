@@ -302,11 +302,11 @@ def createMergeCommit(target, source, commitToBranch=None):
                 refs['B'][target] = sourceSha
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=sourceSha)
-                    resetToSnapshot(sourceTreeSha)
+                    resetToSnapshot(sourceTreeSha, reset=True)
                 dumpResource("refs", refs)
                 printColor("Successfully merged changes to branch '{}'.".format(target), "green")
             else :
-                pass
+                printColor("Merge target must be a branch...", "red")
                 #TO DO: what do we do if merge target is a commit hash? ignore?
                 # depends if we commit all objects on push or just branch relevant ones!
                 # i think we ignore? 23.4
@@ -347,7 +347,7 @@ def createMergeCommit(target, source, commitToBranch=None):
                 refs["B"][target] = newCommit.getHash()
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=newCommit.getHash())
-                    resetToSnapshot(newCommit.snapshot)
+                    resetToSnapshot(newCommit.snapshot, reset=True)
             dumpResource("refs", refs)
             printColor("Successfully committed merge to branch '{}'.".format(target), "green")
 

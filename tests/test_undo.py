@@ -1,7 +1,7 @@
 import os
 import subprocess
 from tests.test_branching import test_branching1
-from libs.MergeLib import mergeSourceIntoTarget
+from libs.MergeManager import mergeSourceIntoTarget
 from libs.BasicUtils import getResource
 import shutil
 

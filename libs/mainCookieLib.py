@@ -10,7 +10,7 @@ from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageF
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand
 from libs.UndoLib import undoCommand
-from libs.MergeLib import mergeSourceIntoTarget
+from libs.MergeManager import mergeSourceIntoTarget
 from libs.LogsManager import logSequence
 from libs.server.serverSetup import initializeServer
 
@@ -66,7 +66,7 @@ argsp.add_argument("paths",
 argsp = argsubparsers.add_parser("status", help="Report the status of the current cookie repository.")
 argsp.add_argument("-s",
                    action='store_true',
-                   help="Check remote status")
+                   help="Check remote status.")
 
 #commit subcommand definition
 argsp = argsubparsers.add_parser("commit", help="Commit your changes.")
@@ -106,6 +106,9 @@ argsp.add_argument("ref",
                    nargs="?",
                    default=None,
                    help="Hash or branch to checkout.")
+argsp.add_argument("-r",
+                   action='store_true',
+                   help="Option to reset local changes.")
 
 #Branch creation subcommand definition
 argsp = argsubparsers.add_parser("create_branch", help="Create a new branch.")
@@ -403,8 +406,11 @@ def remove(args):
 @addToUndoCache(saveResource=["head"])
 @cookieRepoCertified
 def checkout(args):
-    checkoutSnapshot(args)
-
+    generateStatus(args, quiet=True)
+    if args.r:
+        checkoutSnapshot(args)
+    else:
+        checkoutSnapshot(args, reset = True)
 @addToUndoCache()
 @cookieRepoCertified
 def create_branch(args):

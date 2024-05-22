@@ -13,6 +13,8 @@ TO DO:
 
 - fetch
 
+- checkout w no overwrite 
+
 - write more tests
 
 - don't allow commits when tag checked out

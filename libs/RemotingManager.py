@@ -1,6 +1,6 @@
 from utils.prettyPrintLib import printColor
 from libs.BasicUtils import dumpResource, getResource, safeWrite
-from libs.MergeLib import mergeSourceIntoTarget
+from libs.MergeManager import mergeSourceIntoTarget
 from libs.BranchingManager import checkoutSnapshot
 import paramiko
 import os
@@ -150,7 +150,7 @@ def cloneRepo(args):
     safeWrite(os.path.join(".cookie", "userdata"), {"user":"", "email":""}, jsonDump=True)
     safeWrite(os.path.join(".cookie", "history"), {"index":0,"commands":{}}, jsonDump=True)
 
-    checkoutSnapshot(None, specRef=args.branch, force=True)
+    checkoutSnapshot(None, specRef=args.branch, force=True, reset=True)
     safeWrite(os.path.join(".cookie", "remote_config"), config, jsonDump=True)
 
 def remoteConfig(args):
@@ -238,18 +238,10 @@ def pullChanges(args):
     ssh_client.close()
     
     refs = getResource("refs")
-    if refs["B"][head["name"]] != head["hash"]:             # doesn't make sense, need to somehow merge logs if we want to use merge function
+    if refs["B"][head["name"]] != head["hash"]:             
         printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
-        opt=None
-        while opt not in ['y', 'n', 'yes', 'no']:
-            print("====================================================================")
-            print(" <> Do you wish to merge remote branch content? (y/n)")
-            print("====================================================================")
-            opt = input("Please provide an option: ").lower()
-            if opt not in ['y', 'n', 'yes', 'no']:
-                printColor("Please provide a valid option!", "red") 
-        if opt in ["y", "yes"]:
-            mergeSourceIntoTarget(refs["B"][head["name"]], head["hash"], commitToBranch = head["name"])
+        checkoutSnapshot(None, specRef = refs["B"][head["name"]], force=True, reset=False)
+        
 
 def pushChanges(args):
     config = getResource("remote_config")
