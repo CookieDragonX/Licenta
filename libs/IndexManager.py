@@ -44,6 +44,10 @@ def getTargetDirs():
     return dirs
 
 def createCommit(args, DEBUG=False):
+    head=getResource("head")
+    if head['tag']:
+        printColor("Cannot create commit on tag...", "red")
+        sys.exit(1)
     generateStatus(args,quiet=True)
     if not isThereStagedStuff():
         printColor("There is noting to commit...", "blue")
@@ -51,7 +55,6 @@ def createCommit(args, DEBUG=False):
         sys.exit(1) 
     
     metaData=['C']
-    head=getResource("head")
     if head["hash"] == "" :
         metaData.append('None')
     else :
@@ -459,6 +462,10 @@ def generateStatus(args, quiet=True):
             printColor("Nothing new here! No changes found.", "blue")
 
 def stageFiles(paths):
+    head=getResource("head")
+    if head["tag"]:
+        printColor("Cannot stage files on a tag...", "red")
+        exit(1)
     staged=getResource("staged")
     unstaged=getResource("unstaged")
     index=getResource("index")

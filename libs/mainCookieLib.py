@@ -8,7 +8,7 @@ from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
-from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand
+from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand, checkRepositoryInSubdirs
 from libs.UndoLib import undoCommand
 from libs.MergeManager import mergeSourceIntoTarget
 from libs.LogsManager import logSequence
@@ -360,11 +360,11 @@ def addToUndoCache(fct, saveResource=[]):
     return inner
 
 def init(args):
-    
     if args.s:
         initializeServer(args)
     else:
         print(cookieWordArt)
+        checkRepositoryInSubdirs(args.path)
         createDirectoryStructure(args)
 
 def clone(args):
@@ -407,16 +407,13 @@ def remove(args):
 @cookieRepoCertified
 def checkout(args):
     generateStatus(args, quiet=True)
-    if args.r:
-        checkoutSnapshot(args)
-    else:
-        checkoutSnapshot(args, reset = True)
+    checkoutSnapshot(args, reset = args.r)
+
 @addToUndoCache()
 @cookieRepoCertified
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
-    updateHead(args.branch, args.ref==None, args.ref)
-
+    
 @addToUndoCache()
 @cookieRepoCertified
 def delete_branch(args):
@@ -426,7 +423,6 @@ def delete_branch(args):
 @cookieRepoCertified
 def create_tag(args):
     createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
-    updateHead(args.tag, args.ref==None, args.ref)
 
 @addToUndoCache()
 @cookieRepoCertified

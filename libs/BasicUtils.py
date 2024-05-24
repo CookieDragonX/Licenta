@@ -74,7 +74,7 @@ def createDirectoryStructure(args):
         safeWrite(os.path.join(project_dir, "index"), {}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "staged"), {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "unstaged"), {"A":{},"D":{},"M":{}}, jsonDump=True)
-        safeWrite(os.path.join(project_dir, "head"), {"name":"master","hash":""}, jsonDump=True)
+        safeWrite(os.path.join(project_dir, "head"), {"name":"master","hash":"","tag":False}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "userdata"), {"user":"", "email":""}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "remote_config"), {"host":"<hostname>","port":"<port for ssh (22)>","remote_user":"<remote username>","local_ssh_private_key":"<path to local key>","host_os":"<nt/posix>","remote_path":"<path to remote repositories>"}, jsonDump=True)
         safeWrite(os.path.join(project_dir, "refs"), {"B":{"master":""},"T":{}, "D":{}}, jsonDump=True)
@@ -86,6 +86,18 @@ def createDirectoryStructure(args):
         sys.exit(1)
     printColor("Successfully initialized a cookie repository at {}".format(project_dir),'green')
 
+def checkRepositoryInSubdirs(path):
+    # os.makedirs(path)
+    # for pathname in os.listdir():
+    #     if pathname == '.cookie':
+    #         printColor("Found another cookie repository at '{}'...".format(path), "red")
+    #         printColor("Delete '.cookie' directory if files are needed.", "red")
+    #         sys.exit(1)
+    #     if pathname =='.git':
+    #         pass
+    #     if os.path.isdir(pathname):
+    #         checkRepositoryInSubdirs(pathname)
+    pass
 def clearLocalData():
     safeWrite(os.path.join(".cookie", "history"), {"index":0,"commands":{}}, jsonDump=True)
     safeWrite(os.path.join(".cookie", "staged"), {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}}, jsonDump=True)
@@ -115,7 +127,6 @@ def cacheFile(pathname, cacheType='index', fileContent=None):
     else:
         cacheTypeDir = "{}_cache".format(cacheType)
     safeWrite(os.path.join('.cookie', 'cache', cacheTypeDir, pathname), fileContent, binary=True)
-
 
 def clearCommand():
     opt = None

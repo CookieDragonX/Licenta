@@ -13,13 +13,7 @@ TO DO:
 
 - fetch
 
-- checkout w no overwrite 
-
 - write more tests
-
-- don't allow commits when tag checked out
-
-- test create_branch/tag with ref
 
 - check repository in subdirs at init
 
