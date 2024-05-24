@@ -65,7 +65,10 @@ def clearDir(dir):
 def createDirectoryStructure(args):
     project_dir=os.path.join(args.path, '.cookie')
     try:
-        os.makedirs(project_dir)
+        try:
+            os.makedirs(project_dir)
+        except FileExistsError:
+            pass
         os.mkdir(os.path.join(project_dir, "objects"))
         os.makedirs(os.path.join(project_dir, "cache",  "undo_cache"))
         os.makedirs(os.path.join(project_dir, "cache",  "index_cache"))
@@ -87,16 +90,19 @@ def createDirectoryStructure(args):
     printColor("Successfully initialized a cookie repository at {}".format(project_dir),'green')
 
 def checkRepositoryInSubdirs(path):
-    # os.makedirs(path)
-    # for pathname in os.listdir():
-    #     if pathname == '.cookie':
-    #         printColor("Found another cookie repository at '{}'...".format(path), "red")
-    #         printColor("Delete '.cookie' directory if files are needed.", "red")
-    #         sys.exit(1)
-    #     if pathname =='.git':
-    #         pass
-    #     if os.path.isdir(pathname):
-    #         checkRepositoryInSubdirs(pathname)
+    try:
+        os.makedirs(path)
+    except FileExistsError:
+        pass
+    for pathname in os.listdir(path):
+        if pathname == '.cookie':
+            printColor("Found another cookie repository at '{}'...".format(path), "red")
+            printColor("Delete '.cookie' directory if files are needed.", "red")
+            sys.exit(1)
+        if pathname =='.git':
+            pass
+        if os.path.isdir(pathname):
+            checkRepositoryInSubdirs(pathname)
     pass
 def clearLocalData():
     safeWrite(os.path.join(".cookie", "history"), {"index":0,"commands":{}}, jsonDump=True)
