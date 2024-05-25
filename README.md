@@ -11,11 +11,7 @@ TO DO:
 
 ---- TOP PRIO ----
 
-- fetch
-
 - write more tests
-
-- check repository in subdirs at init
 
 - sparse clone 
 

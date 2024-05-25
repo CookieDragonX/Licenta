@@ -239,8 +239,47 @@ def pullChanges(args):
     
     refs = getResource("refs")
     if refs["B"][head["name"]] != head["hash"]:             
-        printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
         checkoutSnapshot(None, specRef = refs["B"][head["name"]], force=True, reset=False)
+        
+def fetchChanges(args):
+    config = getResource("remote_config")
+    try:
+        private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+    except OSError:
+        printColor("Please configure remote data first!", "red")
+        sys.exit(1)
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
+    except TimeoutError:
+        printColor("Connection attempt timed out!", "red")
+        traceback.print_exc()
+        printColor("Check remote host configuration", "red")
+        sys.exit(1) 
+        
+    if config["remote_os"] == 'nt':
+        sep = '\\'
+    else :
+        sep = '/'
+    sftp = ssh_client.open_sftp()
+    remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
+    
+    refs = getResource("refs")
+    head = getResource("head")
+    remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+    if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+        printColor("Local branch is on par with remote branch.", "green")
+        sys.exit(0)
+
+    printColor("Pulling changes from remote, please wait...", "green")
+    pullDirectory(sftp, remotePath, '.', sep)
+    sftp.close()
+    ssh_client.close()
+    
+    refs = getResource("refs")
+    if refs["B"][head["name"]] != head["hash"]:             
+        printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
         
 
 def pushChanges(args):

@@ -5,7 +5,7 @@ import shutil
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
-from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges
+from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges, fetchChanges
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand, checkRepositoryInSubdirs
@@ -177,13 +177,13 @@ argsp.add_argument("-t",
                    required=True,
                    help="Tag name to delete.")
 
-#Undo subcommand definition
+# Log subcommand definition
 argsp = argsubparsers.add_parser("log", help="Print commit data.")
 argsp.add_argument("-b",
                    action='store_true',
                    help="Priority for main branches and not merges.")
 
-#Undo subcommand definition
+# Clone subcommand definition
 argsp = argsubparsers.add_parser("clone", help="Clone remote repository.")
 argsp.add_argument("name",
                    metavar="name",
@@ -255,19 +255,24 @@ argsp.add_argument("-n",
 # Clear subcommand definition
 argsp = argsubparsers.add_parser("clear", help="Clear local data(caches, history).")
 
-# Clear subcommand definition
+# Pull subcommand definition
 argsp = argsubparsers.add_parser("pull", help="Pull changes from remote.")
 
-# Clear subcommand definition
+# Push subcommand definition
 argsp = argsubparsers.add_parser("push", help="Push changes to remote.")
 
-#Undo subcommand definition
+# Fetch subcommand definition
+argsp = argsubparsers.add_parser("fetch", help="Fetch remote changes without updating local repo.")
+
+# Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command.")
 argsp.add_argument("index",
                    metavar="index",
                    nargs="?",
                    default=None,
                    help="Command index to undo")
+
+
 
 
 def main(argv=sys.argv[1:]):
@@ -312,6 +317,8 @@ def main(argv=sys.argv[1:]):
         pull(args)
     elif args.command == 'push':            # pull data from remote
         push(args)
+    elif args.command == 'fetch':           # fetch data from remote
+        fetch(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -473,3 +480,7 @@ def pull(args):
 @cookieRepoCertified
 def push(args):
     pushChanges(args)
+
+@cookieRepoCertified
+def fetch(args):
+    fetchChanges(args)
