@@ -5,7 +5,7 @@ import os
 # B:filename:text
 
 class Blob(Object):
-    def __init__(self,metaData) -> None:
+    def __init__(self,metaData):
         if metaData != None:
             metaDataSplit=metaData.split(b'?')
             filenameAbsPath=metaDataSplit[1]           # split with '/'

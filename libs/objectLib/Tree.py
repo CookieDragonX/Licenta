@@ -5,7 +5,7 @@ import os
 # T:path:hash:path:hash:path:hash...
 
 class Tree(Object):
-    def __init__(self, metaData) -> None:
+    def __init__(self, metaData):
         if metaData!=None:
             try:
                 metaDataDecoded = metaData.decode(encoding='utf-8')

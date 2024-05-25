@@ -38,10 +38,10 @@ def get_proc_status(pid):
 
 def fileEditProcess(path):
     if os.name == "posix":
-        editorName = "vim"
+        editorName = "nano"
     else:
         editorName = "notepad"
-    if shutil.which("notepad"):
+    if shutil.which(editorName):
         phandler = subprocess.Popen([editorName, path])
     elif "EDITOR" in os.environ:
         phandler = subprocess.Popen([os.environ["EDITOR"], path])
@@ -155,7 +155,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             mergedContent = sourceBlob.content
         elif opt == 'm':
             printColor("Resolving conflict for '{}'...".format(filename), "blue")
-            cacheFile(filename, cacheType="merge", fileContent=mergedContent)
+            cacheFile(filename, cacheType="merge", fileContent=mergedContent.encode('utf-8'))
             fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
             with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
                 mergedContent=editedContent.read()

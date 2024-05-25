@@ -2,7 +2,7 @@ from abc import abstractmethod
 from hashlib import sha1
 
 class Object:
-    def __init__(self) -> None:
+    def __init__(self):
         #self.metaData=metaData
         #self.id=sha1(metaData)
         pass

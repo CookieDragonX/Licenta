@@ -7,6 +7,11 @@ BUILD COMMAND: "pyinstaller cookie"
   - exe at 'C:\CHANGE_THIS\dist\cookie\cookie.exe'
   - create env variable with 'C:\CHANGE_THIS\dist\cookie'
 
+RUN TESTS COMMAND: 
+  WINDOWS: "pytest"
+  UNIX   : "python3 -m pytest" (in case of versioning conflicts)
+  - TESTS EXPECT THE COMMAND TO BE RUN IN THE BEGINNING DIR OF SOURCE CODE!!!
+
 TO DO:
 
 ---- TOP PRIO ----
@@ -14,8 +19,6 @@ TO DO:
 - write more tests
 
 - sparse clone 
-
-- https://pypi.org/project/argcomplete/0.1.3/#:~:text=argcomplete%20%2D%20Bash%20completion%20for%20argparse,manage%20your%20command%20line%20options
 
 ---- LOW PRIO ----
 

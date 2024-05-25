@@ -144,8 +144,9 @@ def resolveAddedStaging(pathname, staged, index):
     #check for renamed files 
     stagedAddedPathCopy=deepcopy(staged['A'][pathname])
     del stagedAddedPathCopy['mtime']
+    del stagedAddedPathCopy['ctime']
     for item in list(staged['D']):
-        stagedDeletedCopy = {key: value for key, value in staged['D'][item].items() if 'mtime' not in key}
+        stagedDeletedCopy = {key: value for key, value in staged['D'][item].items() if 'mtime' not in key and 'ctime' not in key}
         if stagedAddedPathCopy == stagedDeletedCopy:
             if item not in index:
                 del staged['D'][item]
@@ -175,7 +176,7 @@ def resolveAddedStaging(pathname, staged, index):
             with open(pathname, "r+b") as newFile:
                 newFileContent=newFile.read()
             if newFileContent==oldObject.content:
-                # File renamed, delete stuff from where it was and add to 'C'
+                # File copied, delete stuff from where it was and add to 'C'
                 del staged['A'][pathname]
                 staged['C'][pathname]=[]
                 staged['C'][pathname].append(item)
@@ -210,10 +211,18 @@ def resolveDeletedStaging(pathname, staged, index):
         del staged['X'][pathname]
         return
     #also check here for renamed files!
+    for item in staged['C']:
+        if staged['C'][item][0] == pathname:
+            # FILE IS RENAMED, NOT COPIED
+            staged['R'][item]=staged['C'][item]
+            del staged['C'][item]
+            del staged['D'][pathname]
+            return
     stagedDeletedPathCopy=deepcopy(staged['D'][pathname])
     del stagedDeletedPathCopy['mtime']
+    del stagedDeletedPathCopy['ctime']
     for item in list(staged['A']):
-        stagedAddedCopy = {key: value for key, value in staged['A'][item].items() if 'mtime' not in key}
+        stagedAddedCopy = {key: value for key, value in staged['A'][item].items() if 'mtime' not in key and 'ctime' not in key}
         if stagedDeletedPathCopy == stagedAddedCopy:
             oldObject=load(index[pathname]['hash'], os.path.join('.cookie', 'objects'))
             with open(item, "r+b") as newFile:
@@ -323,9 +332,9 @@ def populateDifferences(dir, index, staged, differences):
                 for renamedFile in staged['R']:
                     if item in staged['R'][renamedFile]:
                         addToDelete=False
-                for copiedFile in staged['C']:
-                    if item in staged['C'][copiedFile]:
-                        addToDelete=False
+                # for copiedFile in staged['C']:
+                #     if item in staged['C'][copiedFile]:
+                #         addToDelete=False
                 if addToDelete :
                     statDict=index[item]
                     del statDict["hash"]
