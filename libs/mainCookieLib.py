@@ -481,6 +481,7 @@ def pull(args):
 def push(args):
     pushChanges(args)
 
+@addToUndoCache(saveResource=["logs", "refs"])
 @cookieRepoCertified
 def fetch(args):
     fetchChanges(args)

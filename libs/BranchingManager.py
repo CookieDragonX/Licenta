@@ -74,7 +74,7 @@ def updateTree(tree, index, objectsPath, reset, unstaged):
                     index[path]=statDictionary(mode)
                     index[path]['hash'] = hash
                 elif object.__class__.__name__=='Tree':
-                    updateTree(object, index, objectsPath, reset)
+                    updateTree(object, index, objectsPath, reset, unstaged)
                 else:
                     print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
         else:
@@ -85,7 +85,7 @@ def updateTree(tree, index, objectsPath, reset, unstaged):
                 index[path]=statDictionary(mode)
                 index[path]['hash'] = hash
             elif object.__class__.__name__=='Tree':
-                updateTree(object, index, objectsPath, reset)
+                updateTree(object, index, objectsPath, reset, unstaged)
             else:
                 print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
     

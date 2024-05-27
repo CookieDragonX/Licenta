@@ -1,5 +1,5 @@
 {
-    "host":"192.168.0.106",
+    "host":"192.168.1.102",
     "port":"22",
     "remote_user":"Utilizator",
     "local_ssh_private_key":"C:\\Users\\utilizator\\.ssh\\id_rsa",
