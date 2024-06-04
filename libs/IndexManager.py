@@ -44,13 +44,17 @@ def getTargetDirs():
     return dirs
 
 def createCommit(args, DEBUG=False):
+    head=getResource("head")
+    if head['tag']:
+        printColor("Cannot create commit on tag...", "red")
+        sys.exit(1)
     generateStatus(args,quiet=True)
     if not isThereStagedStuff():
         printColor("There is noting to commit...", "blue")
         printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
         sys.exit(1) 
+    
     metaData=['C']
-    head=getResource("head")
     if head["hash"] == "" :
         metaData.append('None')
     else :
@@ -140,8 +144,9 @@ def resolveAddedStaging(pathname, staged, index):
     #check for renamed files 
     stagedAddedPathCopy=deepcopy(staged['A'][pathname])
     del stagedAddedPathCopy['mtime']
+    del stagedAddedPathCopy['ctime']
     for item in list(staged['D']):
-        stagedDeletedCopy = {key: value for key, value in staged['D'][item].items() if 'mtime' not in key}
+        stagedDeletedCopy = {key: value for key, value in staged['D'][item].items() if 'mtime' not in key and 'ctime' not in key}
         if stagedAddedPathCopy == stagedDeletedCopy:
             if item not in index:
                 del staged['D'][item]
@@ -171,7 +176,7 @@ def resolveAddedStaging(pathname, staged, index):
             with open(pathname, "r+b") as newFile:
                 newFileContent=newFile.read()
             if newFileContent==oldObject.content:
-                # File renamed, delete stuff from where it was and add to 'C'
+                # File copied, delete stuff from where it was and add to 'C'
                 del staged['A'][pathname]
                 staged['C'][pathname]=[]
                 staged['C'][pathname].append(item)
@@ -206,10 +211,18 @@ def resolveDeletedStaging(pathname, staged, index):
         del staged['X'][pathname]
         return
     #also check here for renamed files!
+    for item in staged['C']:
+        if staged['C'][item][0] == pathname:
+            # FILE IS RENAMED, NOT COPIED
+            staged['R'][item]=staged['C'][item]
+            del staged['C'][item]
+            del staged['D'][pathname]
+            return
     stagedDeletedPathCopy=deepcopy(staged['D'][pathname])
     del stagedDeletedPathCopy['mtime']
+    del stagedDeletedPathCopy['ctime']
     for item in list(staged['A']):
-        stagedAddedCopy = {key: value for key, value in staged['A'][item].items() if 'mtime' not in key}
+        stagedAddedCopy = {key: value for key, value in staged['A'][item].items() if 'mtime' not in key and 'ctime' not in key}
         if stagedDeletedPathCopy == stagedAddedCopy:
             oldObject=load(index[pathname]['hash'], os.path.join('.cookie', 'objects'))
             with open(item, "r+b") as newFile:
@@ -319,9 +332,9 @@ def populateDifferences(dir, index, staged, differences):
                 for renamedFile in staged['R']:
                     if item in staged['R'][renamedFile]:
                         addToDelete=False
-                for copiedFile in staged['C']:
-                    if item in staged['C'][copiedFile]:
-                        addToDelete=False
+                # for copiedFile in staged['C']:
+                #     if item in staged['C'][copiedFile]:
+                #         addToDelete=False
                 if addToDelete :
                     statDict=index[item]
                     del statDict["hash"]
@@ -410,40 +423,42 @@ def generateStatus(args, quiet=True):
         head = getResource("head")
         refs = getResource("refs")
         config = getResource("remote_config")
-        try:
+        if args.s:
             try:
-                private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
-            except OSError:
-                printColor("Please configure remote data first!", "red")
-                sys.exit(1)
-            ssh_client = paramiko.SSHClient()
-            ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            try:
-                ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
-            except TimeoutError:
-                printColor("Connection attempt timed out!", "red")
-                traceback.print_exc()
-                printColor("Check remote host configuration", "red")
-                sys.exit(1) 
+                try:
+                    private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+                except OSError:
+                    printColor("Please configure remote data first!", "red")
+                    sys.exit(1)
+                ssh_client = paramiko.SSHClient()
+                ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                try:
+                    ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
+                except TimeoutError:
+                    printColor("Connection attempt timed out!", "red")
+                    traceback.print_exc()
+                    printColor("Check remote host configuration", "red")
+                    sys.exit(1) 
+                    
+                if config["remote_os"] == 'nt':
+                    sep = '\\'
+                else :
+                    sep = '/'
+                sftp = ssh_client.open_sftp()
+                remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
                 
-            if config["remote_os"] == 'nt':
-                sep = '\\'
-            else :
-                sep = '/'
-            sftp = ssh_client.open_sftp()
-            remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
-            
-            refs = getResource("refs")
-            head = getResource("head")
-            remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
-            if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
-                printColor("Local branch is on par with remote branch.", "green")
-            else:
-                printColor("Local branch is behind remote branch.", "red")
-                printColor("Please use 'cookie pull' before comitting.", "green")
-        except:
-            printColor("Could not resolve remote, please check configuration.", "red")
-            printColor("Unless this is before first push, in which case all is good!", "red")
+                refs = getResource("refs")
+                head = getResource("head")
+                remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+                if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+                    printColor("Local branch is on par with remote branch.", "green")
+                else:
+                    printColor("Local branch is behind remote branch.", "red")
+                    printColor("Please use 'cookie pull' before comitting.", "green")
+            except:
+                printColor("Could not resolve remote, please check configuration.", "red")
+                printColor("Unless this is before first push, in which case all is good!", "red")
+        
         if head['hash']=='':
             printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
         else:
@@ -456,6 +471,10 @@ def generateStatus(args, quiet=True):
             printColor("Nothing new here! No changes found.", "blue")
 
 def stageFiles(paths):
+    head=getResource("head")
+    if head["tag"]:
+        printColor("Cannot stage files on a tag...", "red")
+        exit(1)
     staged=getResource("staged")
     unstaged=getResource("unstaged")
     index=getResource("index")

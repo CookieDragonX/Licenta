@@ -6,7 +6,8 @@ from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 
-def checkoutSnapshot(args, specRef = None, force=False):
+def checkoutSnapshot(args, specRef = None, force=False, reset=False):
+    refType=None
     if not specRef:
         ref = args.ref
     else :
@@ -35,9 +36,11 @@ def checkoutSnapshot(args, specRef = None, force=False):
     else:
         try:
             if ref in refs['B']:
+                refType='B'
                 printColor("Checking out branch {}...".format(ref), "green")
                 commitHash=refs['B'][ref]
             elif ref in refs['T']:
+                refType='T'
                 printColor("Checking out tag {}...".format(ref), "green")
                 commitHash=refs['T'][ref]
             snapshot=getSnapshotFromCommit(commitHash, objectsPath)
@@ -45,23 +48,36 @@ def checkoutSnapshot(args, specRef = None, force=False):
         except NoSuchObjectException as e:
             printColor("Could not find commit with hash {}".format(commitHash), "red")
             sys.exit(1)
-    resetToSnapshot(snapshot)
-    updateHead(new_head, currentRef=False, ref=commitHash)
+    resetToSnapshot(snapshot, reset)
+    updateHead(new_head, currentRef=False, ref=commitHash, tag=(refType=='T'))
 
-def resetToSnapshot(hash, action='reset'):
+def resetToSnapshot(hash, reset=False):
     objectsPath = os.path.join('.cookie', 'objects')
     index={}
     tree=load(hash, objectsPath)
-    updateTree(tree, index, objectsPath, action)
+    unstaged=getResource("unstaged")
+    updateTree(tree, index, objectsPath, reset=reset, unstaged=unstaged)
     dumpResource("index", index)
 
-def updateTree(tree, index, objectsPath, action='reset'):
+def updateTree(tree, index, objectsPath, reset, unstaged):
     if tree.__class__.__name__!='Tree':
         printColor("[DEV ERROR][updateTree] Method received object that is not tree: {}".format(tree.__class__.__name__), "red")
         printColor("hash: {}".format(tree.getHash()),"red")
         sys.exit(1)
     for path, hash in tree.map.items():
-        if action=='reset':
+        if path in unstaged['A'] or path in unstaged['M'] or path in unstaged['D']:
+            if reset:
+                object=load(hash, objectsPath)
+                if object.__class__.__name__=='Blob':
+                    safeWrite(path, object.content, binary=True)
+                    mode = os.lstat(path)
+                    index[path]=statDictionary(mode)
+                    index[path]['hash'] = hash
+                elif object.__class__.__name__=='Tree':
+                    updateTree(object, index, objectsPath, reset, unstaged)
+                else:
+                    print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
+        else:
             object=load(hash, objectsPath)
             if object.__class__.__name__=='Blob':
                 safeWrite(path, object.content, binary=True)
@@ -69,20 +85,18 @@ def updateTree(tree, index, objectsPath, action='reset'):
                 index[path]=statDictionary(mode)
                 index[path]['hash'] = hash
             elif object.__class__.__name__=='Tree':
-                updateTree(object, index, objectsPath, action)
+                updateTree(object, index, objectsPath, reset, unstaged)
             else:
-                print("[DEV ERROR][resetToSnapshot] Found a commit hash in a tree probably?")
-        elif action=='merge':
-            #logic for merging changes with commit that gets checked out
-            pass
-        else:
-            printColor("[DEV ERROR][resetToSnapshot] action undefined {}".format(action), 'red')
+                print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
     
-def updateHead(newHead, currentRef=True, ref=None):
+def updateHead(newHead, currentRef=True, ref=None, tag=False):
     head=getResource("head") 
     head["name"]=newHead
     if not currentRef:
         head["hash"]=ref
+    head["tag"] = False
+    if tag:
+        head["tag"]=True
     dumpResource("head", head)
 
 def createBranch(branchName, currentRef=True, ref=None, checkout=False):
@@ -91,54 +105,49 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         printColor("Please commit something before creating branches!", "red")
         printColor("Merging won't be possible if branches start from different commits!", "red")
         sys.exit(1)
-    try:
-        if currentRef:
-            ref=head["hash"]
-        if not currentRef :
-            if ref==None:
-                printColor("[DEV ERROR][createBranch] Method should take given ref but no ref given!", "red")
-                sys.exit(1)
-        elif checkout:
-            checkoutSnapshot(None, ref)
-        refs=getResource("refs")
-        if branchName in refs["T"].keys():
-            printColor("Tag name '{}' already exists!".format(branchName), "red")
+    if currentRef:
+        ref=head["hash"]
+    if not currentRef :
+        if ref==None:
+            printColor("[DEV ERROR][createBranch] Method should take given ref but no ref given!", "red")
             sys.exit(1)
-        elif branchName in refs["B"].keys():
-            printColor("Branch name '{}' already exists!".format(branchName), "red")
-            sys.exit(1)
-        else:
-            refs["B"][branchName]=ref
-        dumpResource("refs", refs)
-    except BranchExistsException as e:
-        printColor("Cannot create a branch with name '{}' as one already exists", "red")
+    refs=getResource("refs")
+    if branchName in refs["T"].keys():
+        printColor("Tag name '{}' already exists!".format(branchName), "red")
+        sys.exit(1)
+    elif branchName in refs["B"].keys():
+        printColor("Branch name '{}' already exists!".format(branchName), "red")
+        sys.exit(1)
+    else:
+        refs["B"][branchName]=ref
+    dumpResource("refs", refs)
+    if checkout:
+        checkoutSnapshot(None, specRef=branchName)
 
 def createTag(tagName, currentRef=True, ref=None, checkout=False):
     head=getResource("head")
     if head["hash"]=="":
         printColor("Please commit something before creating tags!", "red")
         sys.exit(1)
-    try:
-        if currentRef:
-            ref=head["hash"]
-        if not currentRef :
-            if ref==None:
-                printColor("[DEV ERROR][createTag] Method should take given ref but no ref given!", "red")
-                sys.exit(1)
-            elif checkout:
-                checkoutSnapshot(None, ref)
-        refs=getResource("refs")
-        if tagName in refs["T"].keys():
-            printColor("Tag name '{}' already exists!".format(tagName), "red")
+    if currentRef:
+        ref=head["hash"]
+    if not currentRef :
+        if ref==None:
+            printColor("[DEV ERROR][createTag] Method should take given ref but no ref given!", "red")
             sys.exit(1)
-        elif tagName in refs["B"].keys():
-            printColor("Branch name '{}' already exists!".format(tagName), "red")
-            sys.exit(1)
-        else:
-            refs["T"][tagName]=ref
-        dumpResource("refs", refs)
-    except BranchExistsException as e:
-        printColor("Cannot create a tag with name '{}' as one already exists", "red")
+    refs=getResource("refs")
+    if tagName in refs["T"].keys():
+        printColor("Tag name '{}' already exists!".format(tagName), "red")
+        sys.exit(1)
+    elif tagName in refs["B"].keys():
+        printColor("Branch name '{}' already exists!".format(tagName), "red")
+        sys.exit(1)
+    else:
+        refs["T"][tagName]=ref
+    dumpResource("refs", refs)
+    if checkout:
+        checkoutSnapshot(None, specRef=tagName)
+
 
 
 def updateBranchSnapshot():

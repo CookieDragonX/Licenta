@@ -1,10 +1,16 @@
 import os
 import subprocess
-from tests.test_branching import test_branching1, test_cleanup
-from libs.MergeLib import mergeSourceIntoTarget
+from tests.test_branching import test_branching1
+from libs.MergeManager import mergeSourceIntoTarget
 from libs.BasicUtils import getResource
+import shutil
 
-cookiePath="D:\\stuffs\\Licenta"
+if os.name == 'nt':
+    interpreter = ["py", "-3"]
+else:
+    interpreter = ["python3"]
+
+cookiePath=os.getcwd()
 
 def test_undo_add():
     # at the end of test_branching1() we are on master with one commit
@@ -13,13 +19,13 @@ def test_undo_add():
         file.write("stuff stuff stuff")
     
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", "."]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", "."]
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "undo"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "undo"]
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"]
     )
     unstaged = getResource("unstaged")
     staged = getResource("staged")
@@ -27,16 +33,16 @@ def test_undo_add():
     assert "something.txt" not in staged["A"]
     assert "something.txt" in unstaged["A"]
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "add", "."]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", "."]
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "remove", "."]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "remove", "."]
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "undo"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "undo"]
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "status"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"]
     )
     unstaged = getResource("unstaged")
     staged = getResource("staged")
@@ -47,15 +53,22 @@ def test_undo_commit():
     head = getResource("head")
     oldCommit = head["hash"]
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "commit", "-m", "committed file"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "committed file"]
     )
     subprocess.run(
-        ["py", "-3", os.path.join(cookiePath, 'cookie'), "undo"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "undo"]
     )
     head = getResource("head")
     staged = getResource("staged")
     assert "something.txt" in staged["A"]
     assert head["hash"] == oldCommit
 
-# def test_clean_undo():
-#     test_cleanup()
+def test_clean_undo():
+    result = subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
+        capture_output = True,
+        text = True 
+    )
+    assert "Cookie does not assume responsability!" in result.stdout
+    os.chdir(cookiePath)
+    shutil.rmtree("Test_Repo")

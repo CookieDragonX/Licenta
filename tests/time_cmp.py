@@ -40,14 +40,24 @@ def setup_git():
 
 
 @measure_time
-def git_add_and_commit(initial_path):
+def git_add(initial_path):
     os.chdir(os.path.join(initial_path, "Test_Repo"))
     subprocess.run(["git", "add", "."], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
-    subprocess.run(["git", "commit", "-m", "test"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
 
 
 @measure_time
-def git_reset_to_main(initial_path):
+def git_status(initial_path):
+    os.chdir(os.path.join(initial_path, "Test_Repo"))
+    subprocess.run(["git", "status"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
+
+
+@measure_time
+def git_commit(initial_path):
+    os.chdir(os.path.join(initial_path, "Test_Repo"))
+    subprocess.run(["git", "commit", "-m", "test"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
+
+@measure_time
+def git_reset_to_master(initial_path):
     os.chdir(os.path.join(initial_path, "Test_Repo"))
     subprocess.run(["git", "checkout", "-b", "new"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
     for file in os.listdir():
@@ -70,13 +80,22 @@ def setup_cookie():
     subprocess.run(['cookie', "login", "-u", 'test_user', "-e", 'test_email'], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
 
 @measure_time
-def cookie_add_and_commit(initial_path):
+def cookie_add(initial_path):
     os.chdir(os.path.join(initial_path, "Test_Repo"))
     subprocess.run(["cookie", "add", "."], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
+
+@measure_time
+def cookie_status(initial_path):
+    os.chdir(os.path.join(initial_path, "Test_Repo"))
+    subprocess.run(["cookie", "status"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
+
+@measure_time
+def cookie_commit(initial_path):
+    os.chdir(os.path.join(initial_path, "Test_Repo"))
     subprocess.run(["cookie", "commit", "-m", "test"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
 
 @measure_time
-def cookie_reset_to_main(initial_path):
+def cookie_reset_to_master(initial_path):
     os.chdir(os.path.join(initial_path, "Test_Repo"))
     subprocess.run(["cookie", "create_branch", "-b", "new"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL) 
     for file in os.listdir():
@@ -99,12 +118,16 @@ if os.path.exists(os.path.join(initial_path, "Test_Repo")):
     cleanup(initial_path)
 
 setup_git()
-git_add_and_commit(initial_path)
-git_reset_to_main(initial_path)
+git_status(initial_path)
+git_add(initial_path)
+git_commit(initial_path)
+git_reset_to_master(initial_path)
 cleanup(initial_path)
 
 
 setup_cookie()
-cookie_add_and_commit(initial_path)
-cookie_reset_to_main(initial_path)
+cookie_status(initial_path)
+cookie_add(initial_path)
+cookie_commit(initial_path)
+cookie_reset_to_master(initial_path)
 cleanup(initial_path)

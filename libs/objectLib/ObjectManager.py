@@ -68,6 +68,4 @@ def hashTree(dir, objectsPath):
 
 def getSnapshotFromCommit(hash, objectsPath):
     commit=load(hash, objectsPath)
-    print(hash)
-    print(commit.getMetaData())
     return commit.snapshot

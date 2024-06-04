@@ -50,6 +50,8 @@ def undoCommand(args):
         undo_rconfig(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'pull':
         undo_pull(prevArgs, indexToUndo)
+    elif prevArgs["command"] == 'fetch':
+        undo_fetch(prevArgs, indexToUndo)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -120,6 +122,11 @@ def undo_rconfig(args, indexToUndo):
     clearCache(indexToUndo)
 
 def undo_pull(args, indexToUndo):
+    restoreResource(indexToUndo, "refs")
+    restoreResource(indexToUndo, "logs")
+    clearCache(indexToUndo)
+
+def undo_fetch(args, indexToUndo):
     restoreResource(indexToUndo, "refs")
     restoreResource(indexToUndo, "logs")
     clearCache(indexToUndo)

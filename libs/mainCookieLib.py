@@ -5,12 +5,12 @@ import shutil
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
-from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges
+from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges, fetchChanges
 from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
 from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
-from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand
+from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand, checkRepositoryInSubdirs
 from libs.UndoLib import undoCommand
-from libs.MergeLib import mergeSourceIntoTarget
+from libs.MergeManager import mergeSourceIntoTarget
 from libs.LogsManager import logSequence
 from libs.server.serverSetup import initializeServer
 
@@ -64,6 +64,9 @@ argsp.add_argument("paths",
 
 #status subcommand definition
 argsp = argsubparsers.add_parser("status", help="Report the status of the current cookie repository.")
+argsp.add_argument("-s",
+                   action='store_true',
+                   help="Check remote status.")
 
 #commit subcommand definition
 argsp = argsubparsers.add_parser("commit", help="Commit your changes.")
@@ -103,6 +106,9 @@ argsp.add_argument("ref",
                    nargs="?",
                    default=None,
                    help="Hash or branch to checkout.")
+argsp.add_argument("-r",
+                   action='store_true',
+                   help="Option to reset local changes.")
 
 #Branch creation subcommand definition
 argsp = argsubparsers.add_parser("create_branch", help="Create a new branch.")
@@ -171,13 +177,13 @@ argsp.add_argument("-t",
                    required=True,
                    help="Tag name to delete.")
 
-#Undo subcommand definition
+# Log subcommand definition
 argsp = argsubparsers.add_parser("log", help="Print commit data.")
 argsp.add_argument("-b",
                    action='store_true',
                    help="Priority for main branches and not merges.")
 
-#Undo subcommand definition
+# Clone subcommand definition
 argsp = argsubparsers.add_parser("clone", help="Clone remote repository.")
 argsp.add_argument("name",
                    metavar="name",
@@ -249,19 +255,24 @@ argsp.add_argument("-n",
 # Clear subcommand definition
 argsp = argsubparsers.add_parser("clear", help="Clear local data(caches, history).")
 
-# Clear subcommand definition
+# Pull subcommand definition
 argsp = argsubparsers.add_parser("pull", help="Pull changes from remote.")
 
-# Clear subcommand definition
+# Push subcommand definition
 argsp = argsubparsers.add_parser("push", help="Push changes to remote.")
 
-#Undo subcommand definition
+# Fetch subcommand definition
+argsp = argsubparsers.add_parser("fetch", help="Fetch remote changes without updating local repo.")
+
+# Undo subcommand definition
 argsp = argsubparsers.add_parser("undo", help="Undo a command.")
 argsp.add_argument("index",
                    metavar="index",
                    nargs="?",
                    default=None,
                    help="Command index to undo")
+
+
 
 
 def main(argv=sys.argv[1:]):
@@ -306,6 +317,8 @@ def main(argv=sys.argv[1:]):
         pull(args)
     elif args.command == 'push':            # pull data from remote
         push(args)
+    elif args.command == 'fetch':           # fetch data from remote
+        fetch(args)
     else:
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
@@ -354,11 +367,11 @@ def addToUndoCache(fct, saveResource=[]):
     return inner
 
 def init(args):
-    
     if args.s:
         initializeServer(args)
     else:
         print(cookieWordArt)
+        checkRepositoryInSubdirs(args.path)
         createDirectoryStructure(args)
 
 def clone(args):
@@ -400,14 +413,14 @@ def remove(args):
 @addToUndoCache(saveResource=["head"])
 @cookieRepoCertified
 def checkout(args):
-    checkoutSnapshot(args)
+    generateStatus(args, quiet=True)
+    checkoutSnapshot(args, reset = args.r)
 
 @addToUndoCache()
 @cookieRepoCertified
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
-    updateHead(args.branch, args.ref==None, args.ref)
-
+    
 @addToUndoCache()
 @cookieRepoCertified
 def delete_branch(args):
@@ -417,7 +430,6 @@ def delete_branch(args):
 @cookieRepoCertified
 def create_tag(args):
     createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
-    updateHead(args.tag, args.ref==None, args.ref)
 
 @addToUndoCache()
 @cookieRepoCertified
@@ -468,3 +480,8 @@ def pull(args):
 @cookieRepoCertified
 def push(args):
     pushChanges(args)
+
+@addToUndoCache(saveResource=["logs", "refs"])
+@cookieRepoCertified
+def fetch(args):
+    fetchChanges(args)

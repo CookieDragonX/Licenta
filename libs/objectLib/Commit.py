@@ -11,7 +11,7 @@ from libs.objectLib.Object import Object
 
 
 class Commit(Object):
-    def __init__(self, metaData) -> None:
+    def __init__(self, metaData):
         try:
             metaDataDecoded=metaData.decode(encoding='utf-8')
         except AttributeError:

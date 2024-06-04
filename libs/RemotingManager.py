@@ -1,6 +1,6 @@
 from utils.prettyPrintLib import printColor
 from libs.BasicUtils import dumpResource, getResource, safeWrite
-from libs.MergeLib import mergeSourceIntoTarget
+from libs.MergeManager import mergeSourceIntoTarget
 from libs.BranchingManager import checkoutSnapshot
 import paramiko
 import os
@@ -150,7 +150,7 @@ def cloneRepo(args):
     safeWrite(os.path.join(".cookie", "userdata"), {"user":"", "email":""}, jsonDump=True)
     safeWrite(os.path.join(".cookie", "history"), {"index":0,"commands":{}}, jsonDump=True)
 
-    checkoutSnapshot(None, specRef=args.branch, force=True)
+    checkoutSnapshot(None, specRef=args.branch, force=True, reset=True)
     safeWrite(os.path.join(".cookie", "remote_config"), config, jsonDump=True)
 
 def remoteConfig(args):
@@ -238,18 +238,49 @@ def pullChanges(args):
     ssh_client.close()
     
     refs = getResource("refs")
-    if refs["B"][head["name"]] != head["hash"]: # something here
+    if refs["B"][head["name"]] != head["hash"]:             
+        checkoutSnapshot(None, specRef = refs["B"][head["name"]], force=True, reset=False)
+        
+def fetchChanges(args):
+    config = getResource("remote_config")
+    try:
+        private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
+    except OSError:
+        printColor("Please configure remote data first!", "red")
+        sys.exit(1)
+    ssh_client = paramiko.SSHClient()
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh_client.connect(config["host"] , config["port"], config["remote_user"], pkey=private_key)
+    except TimeoutError:
+        printColor("Connection attempt timed out!", "red")
+        traceback.print_exc()
+        printColor("Check remote host configuration", "red")
+        sys.exit(1) 
+        
+    if config["remote_os"] == 'nt':
+        sep = '\\'
+    else :
+        sep = '/'
+    sftp = ssh_client.open_sftp()
+    remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
+    
+    refs = getResource("refs")
+    head = getResource("head")
+    remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+    if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+        printColor("Local branch is on par with remote branch.", "green")
+        sys.exit(0)
+
+    printColor("Pulling changes from remote, please wait...", "green")
+    pullDirectory(sftp, remotePath, '.', sep)
+    sftp.close()
+    ssh_client.close()
+    
+    refs = getResource("refs")
+    if refs["B"][head["name"]] != head["hash"]:             
         printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
-        opt=None
-        while opt not in ['y', 'n', 'yes', 'no']:
-            print("====================================================================")
-            print(" <> Do you wish to merge remote branch content? (y/n)")
-            print("====================================================================")
-            opt = input("Please provide an option: ").lower()
-            if opt not in ['y', 'n', 'yes', 'no']:
-                printColor("Please provide a valid option!", "red")
-        if opt in ["y", "yes"]:
-            mergeSourceIntoTarget(refs["B"][head["name"]], head["hash"], commitToBranch = head["name"])
+        
 
 def pushChanges(args):
     config = getResource("remote_config")
