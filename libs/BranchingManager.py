@@ -55,39 +55,39 @@ def resetToSnapshot(hash, reset=False):
     objectsPath = os.path.join('.cookie', 'objects')
     index={}
     tree=load(hash, objectsPath)
-    unstaged=getResource("unstaged")
-    updateTree(tree, index, objectsPath, reset=reset, unstaged=unstaged)
+    updateTree(tree, index, objectsPath, reset=reset)
     dumpResource("index", index)
 
-def updateTree(tree, index, objectsPath, reset, unstaged):
+def updateTree(tree, index, objectsPath, reset):
     if tree.__class__.__name__!='Tree':
         printColor("[DEV ERROR][updateTree] Method received object that is not tree: {}".format(tree.__class__.__name__), "red")
         printColor("hash: {}".format(tree.getHash()),"red")
         sys.exit(1)
     for path, hash in tree.map.items():
-        if path in unstaged['A'] or path in unstaged['M'] or path in unstaged['D']:
+        # if path in unstaged['A'] or path in unstaged['M'] or path in unstaged['D']:
+        #     if reset:
+        #         object=load(hash, objectsPath)
+        #         if object.__class__.__name__=='Blob':
+        #             safeWrite(path, object.content, binary=True)
+        #             mode = os.lstat(path)
+        #             index[path]=statDictionary(mode)
+        #             index[path]['hash'] = hash
+        #         elif object.__class__.__name__=='Tree':
+        #             updateTree(object, index, objectsPath, reset, unstaged)
+        #         else:
+        #             print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
+        # else:
+        object=load(hash, objectsPath)
+        if object.__class__.__name__=='Blob':
             if reset:
-                object=load(hash, objectsPath)
-                if object.__class__.__name__=='Blob':
-                    safeWrite(path, object.content, binary=True)
-                    mode = os.lstat(path)
-                    index[path]=statDictionary(mode)
-                    index[path]['hash'] = hash
-                elif object.__class__.__name__=='Tree':
-                    updateTree(object, index, objectsPath, reset, unstaged)
-                else:
-                    print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
-        else:
-            object=load(hash, objectsPath)
-            if object.__class__.__name__=='Blob':
                 safeWrite(path, object.content, binary=True)
-                mode = os.lstat(path)
-                index[path]=statDictionary(mode)
-                index[path]['hash'] = hash
-            elif object.__class__.__name__=='Tree':
-                updateTree(object, index, objectsPath, reset, unstaged)
-            else:
-                print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
+            mode = os.lstat(path)
+            index[path]=statDictionary(mode)
+            index[path]['hash'] = hash
+        elif object.__class__.__name__=='Tree':
+            updateTree(object, index, objectsPath, reset)
+        else:
+            print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
     
 def updateHead(newHead, currentRef=True, ref=None, tag=False):
     head=getResource("head") 
