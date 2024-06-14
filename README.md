@@ -16,14 +16,8 @@ RUN TESTS COMMAND:
   UNIX   : "python3 -m pytest" (in case of versioning conflicts)
   - TESTS EXPECT THE COMMAND TO BE RUN IN THE BEGINNING DIR OF SOURCE CODE!!!
   - MUST HAVE pytest INSTALLED: https://docs.pytest.org/en/8.2.x/
-TO DO:
 
----- TOP PRIO ----
-
-- write more tests
-
-- sparse clone 
-
----- LOW PRIO ----
-
-- stash/unstash
+TO DISABLE CERTAIN TEST SUITES:
+  EACH TEST SUITE HAS A VARIABLE "IGNORE_\<suite name\>_TESTS" AT THE BEGINNING 
+  SET VARIABLE TO TRUE IF A CERTAIN SUITE NEEDS TO BE IGNORED
+  REMOTE TESTS ARE DISABLED BY DEFAULT
