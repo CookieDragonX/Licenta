@@ -413,7 +413,7 @@ def remove(args):
 @cookieRepoCertified
 @addToUndoCache(saveResource=["head"])
 def checkout(args):
-    generateStatus(args, quiet=True)
+    #generateStatus(args, quiet=True)
     checkoutSnapshot(args, reset = args.r)
 
 @cookieRepoCertified
