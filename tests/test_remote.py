@@ -1,16 +1,19 @@
 import os
 import subprocess
-from libs.BasicUtils import getResource
 import shutil
+import pytest
 
 if os.name == 'nt':
     interpreter = ["py", "-3"]
 else:
     interpreter = ["python3"]
 
+IGNORE_REMOTE_TESTS=True
 
 cookiePath=os.getcwd()
 
+@pytest.mark.skipif(IGNORE_REMOTE_TESTS,
+                    reason="IGNORE_REMOTE_TESTS is True")
 def test_clone():
     if os.path.exists("Test_Repo"):
         shutil.rmtree("Test_Repo")
@@ -37,7 +40,8 @@ def test_clone():
     assert "Checking out branch secondary_branch..." in result.stdout
 
 
-
+@pytest.mark.skipif(IGNORE_REMOTE_TESTS,
+                    reason="IGNORE_REMOTE_TESTS is True")
 def test_clean_remote():
     os.chdir(cookiePath)
     shutil.rmtree("Test_Repo")

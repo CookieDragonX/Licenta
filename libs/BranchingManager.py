@@ -55,40 +55,41 @@ def resetToSnapshot(hash, reset=False):
     objectsPath = os.path.join('.cookie', 'objects')
     index={}
     tree=load(hash, objectsPath)
-    unstaged=getResource("unstaged")
-    updateTree(tree, index, objectsPath, reset=reset, unstaged=unstaged)
+    updateTree(tree, index, objectsPath, reset=reset)
     dumpResource("index", index)
-
-def updateTree(tree, index, objectsPath, reset, unstaged):
+    
+def updateTree(tree, index, objectsPath, reset):
     if tree.__class__.__name__!='Tree':
         printColor("[DEV ERROR][updateTree] Method received object that is not tree: {}".format(tree.__class__.__name__), "red")
         printColor("hash: {}".format(tree.getHash()),"red")
         sys.exit(1)
     for path, hash in tree.map.items():
-        if path in unstaged['A'] or path in unstaged['M'] or path in unstaged['D']:
-            if reset:
-                object=load(hash, objectsPath)
-                if object.__class__.__name__=='Blob':
+        object=load(hash, objectsPath)
+        if object.__class__.__name__=='Blob':
+            try:
+                with open(path, "rb") as file:
+                    currentContent = file.read()
+                if object.content != currentContent:
+                    if reset:
+                        safeWrite(path, object.content, binary=True)
+                        mode = os.lstat(path)
+                        index[path] = statDictionary(mode)
+                    else:
+                        index[path] = statDictionary(None)
+                    index[path]['hash'] = hash
+            except FileNotFoundError:
+                if reset:
                     safeWrite(path, object.content, binary=True)
                     mode = os.lstat(path)
-                    index[path]=statDictionary(mode)
-                    index[path]['hash'] = hash
-                elif object.__class__.__name__=='Tree':
-                    updateTree(object, index, objectsPath, reset, unstaged)
+                    index[path] = statDictionary(mode)
                 else:
-                    print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
-        else:
-            object=load(hash, objectsPath)
-            if object.__class__.__name__=='Blob':
-                safeWrite(path, object.content, binary=True)
-                mode = os.lstat(path)
-                index[path]=statDictionary(mode)
+                    index[path] = statDictionary(None)
                 index[path]['hash'] = hash
-            elif object.__class__.__name__=='Tree':
-                updateTree(object, index, objectsPath, reset, unstaged)
-            else:
-                print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
-    
+        elif object.__class__.__name__=='Tree':
+            updateTree(object, index, objectsPath, reset)
+        else:
+            print("[DEV ERROR][updateTree] Found a commit hash in a tree probably?")
+            
 def updateHead(newHead, currentRef=True, ref=None, tag=False):
     head=getResource("head") 
     head["name"]=newHead
@@ -185,7 +186,7 @@ def deleteTag(tagName):
         head["name"] = "DETACHED"
     refs['D'][tagName] = refs['T'][tagName]
     del refs['T'][tagName]
-    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
+    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
     os.makedirs(undoCachePath, exist_ok=True)
     safeWrite(os.path.join(undoCachePath, tagName), undoInfo)
         

@@ -109,6 +109,9 @@ argsp.add_argument("ref",
 argsp.add_argument("-r",
                    action='store_true',
                    help="Option to reset local changes.")
+argsp.add_argument("-f",
+                   action='store_true',
+                   help="Option to force checkout on same branch.")
 
 #Branch creation subcommand definition
 argsp = argsubparsers.add_parser("create_branch", help="Create a new branch.")
@@ -413,8 +416,8 @@ def remove(args):
 @cookieRepoCertified
 @addToUndoCache(saveResource=["head"])
 def checkout(args):
-    generateStatus(args, quiet=True)
-    checkoutSnapshot(args, reset = args.r)
+    #generateStatus(args, quiet=True) HERE
+    checkoutSnapshot(args, reset = args.r, force = args.f)
 
 @cookieRepoCertified
 @addToUndoCache()
@@ -434,7 +437,7 @@ def create_tag(args):
 @cookieRepoCertified
 @addToUndoCache()
 def delete_tag(args):
-    deleteTag(args.branch)
+    deleteTag(args.tag)
 
 @cookieRepoCertified
 def status(args):

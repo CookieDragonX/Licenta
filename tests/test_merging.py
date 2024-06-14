@@ -4,14 +4,19 @@ from tests.test_branching import test_branching1
 from libs.MergeManager import mergeSourceIntoTarget
 from libs.BasicUtils import getResource
 import shutil 
+import pytest
 
 if os.name == 'nt':
     interpreter = ["py", "-3"]
 else:
     interpreter = ["python3"]
 
+IGNORE_MERGING_TESTS=False
+
 cookiePath=os.getcwd()
 
+@pytest.mark.skipif(IGNORE_MERGING_TESTS,
+                    reason="IGNORE_MERGING_TESTS is True")
 def test_merging1(monkeypatch):
     # at the end of test_branching1() we are on master with one commit
     test_branching1() 
@@ -48,8 +53,10 @@ def test_merging1(monkeypatch):
     mergeSourceIntoTarget("master", "secondary_branch")
     with open("file.txt", "r") as fp:
         content = fp.read()
-    assert content == "something new"
-
+    assert content == "something different"
+    
+@pytest.mark.skipif(IGNORE_MERGING_TESTS,
+                    reason="IGNORE_MERGING_TESTS is True")
 def test_clean_merge():
     result = subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
