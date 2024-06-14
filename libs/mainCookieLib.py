@@ -398,41 +398,41 @@ def delete(args):
         printColor("Cookie does not assume responsability!", "red")
         sys.exit(1)
 
-@addToUndoCache(saveResource=["staged"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["staged"])
 def add(args):
     generateStatus(args,quiet=True)
     stageFiles(args.paths)
-
-@addToUndoCache(saveResource=["staged"])
+    
 @cookieRepoCertified
+@addToUndoCache(saveResource=["staged"])
 def remove(args):
     generateStatus(args, quiet=True)
     unstageFiles(args.paths)
 
-@addToUndoCache(saveResource=["head"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["head"])
 def checkout(args):
     generateStatus(args, quiet=True)
     checkoutSnapshot(args, reset = args.r)
 
-@addToUndoCache()
 @cookieRepoCertified
+@addToUndoCache()
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
-    
+
+@cookieRepoCertified    
 @addToUndoCache()
-@cookieRepoCertified
 def delete_branch(args):
     deleteBranch(args.branch)
 
-@addToUndoCache()
 @cookieRepoCertified
+@addToUndoCache()
 def create_tag(args):
     createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
 
-@addToUndoCache()
 @cookieRepoCertified
+@addToUndoCache()
 def delete_tag(args):
     deleteTag(args.branch)
 
@@ -440,13 +440,13 @@ def delete_tag(args):
 def status(args):
     generateStatus(args, quiet=False)
 
-@addToUndoCache(saveResource=["refs", "index", "head", "logs", "staged"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["refs", "index", "head", "logs", "staged"])
 def commit(args):
     createCommit(args, DEBUG=DEBUG)
 
-@addToUndoCache(saveResource=["userdata"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["userdata"])
 def login(args):
     editLoginFile(args)
 
@@ -454,8 +454,8 @@ def login(args):
 def log(args):
     logSequence(args)
 
-@addToUndoCache(saveResource=["refs", "index", "head", "logs", "staged"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["refs", "index", "head", "logs", "staged"])
 def merge(args):
     mergeSourceIntoTarget(args.target, args.source)
 
@@ -463,8 +463,8 @@ def merge(args):
 def undo(args):
     undoCommand(args)
 
-@addToUndoCache(saveResource=["remote_config"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["remote_config"])
 def rconfig(args):
     remoteConfig(args)
 
@@ -472,8 +472,8 @@ def rconfig(args):
 def clear(args):
     clearCommand()
 
-@addToUndoCache(saveResource=["logs", "refs"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["logs", "refs"])
 def pull(args):
     pullChanges(args)
 
@@ -481,7 +481,7 @@ def pull(args):
 def push(args):
     pushChanges(args)
 
-@addToUndoCache(saveResource=["logs", "refs"])
 @cookieRepoCertified
+@addToUndoCache(saveResource=["logs", "refs"])
 def fetch(args):
     fetchChanges(args)
