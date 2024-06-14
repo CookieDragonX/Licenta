@@ -66,9 +66,18 @@ def updateTree(tree, index, objectsPath, reset):
     for path, hash in tree.map.items():
         object=load(hash, objectsPath)
         if object.__class__.__name__=='Blob':
-            with open(path, "rb") as file:
-                currentContent = file.read()
-            if object.content != currentContent:
+            try:
+                with open(path, "rb") as file:
+                    currentContent = file.read()
+                if object.content != currentContent:
+                    if reset:
+                        safeWrite(path, object.content, binary=True)
+                        mode = os.lstat(path)
+                        index[path] = statDictionary(mode)
+                    else:
+                        index[path] = statDictionary(None)
+                    index[path]['hash'] = hash
+            except FileNotFoundError:
                 if reset:
                     safeWrite(path, object.content, binary=True)
                     mode = os.lstat(path)
@@ -177,7 +186,7 @@ def deleteTag(tagName):
         head["name"] = "DETACHED"
     refs['D'][tagName] = refs['T'][tagName]
     del refs['T'][tagName]
-    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
+    undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
     os.makedirs(undoCachePath, exist_ok=True)
     safeWrite(os.path.join(undoCachePath, tagName), undoInfo)
         
