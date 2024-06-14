@@ -130,35 +130,48 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
     if hasConflict and not dataIsBinary:
         printColor("Found conflict in file '{}'.".format(filename), "red")
         opt = None
-        while opt not in ['t', 's', 'm', 'q']:
-            print("========================================================================")
-            print     (" <> Options:")
-            printColor("    [h] --> Show conflicting content.", "blue")
-            print     ("    [t] --> Choose content of merge target.")
-            print     ("    [s] --> Choose content of merge source.")
-            print     ("    [m] --> Manual conflict resolution.")
-            printColor("    [q] --> Quit merging...", "red")
-            print("========================================================================")
-            opt = input("Please provide an option: ").lower()
-            if opt not in ['t', 's', 'm', 'q']:
-                printColor("Please choose a valid option!", "red")
-            if opt == 'h':
-                print(_unidiff_output(sourceString, targetString))
-        if opt == 'q':
-            printColor(" <> Aborting merge...", "red", "red")
-            sys.exit(1)
-        elif opt == 't':
-            printColor(" <> '{}' file receives target content...".format(filename), "blue")
-            mergedContent = targetBlob.content
-        elif opt == 's':
-            printColor(" <> '{}' file receives source content...".format(filename), "blue")
-            mergedContent = sourceBlob.content
-        elif opt == 'm':
-            printColor("Resolving conflict for '{}'...".format(filename), "blue")
-            cacheFile(filename, cacheType="merge", fileContent=mergedContent.encode('utf-8'))
-            fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
-            with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
-                mergedContent=editedContent.read()
+        conflictSolved = False
+        while not conflictSolved :
+            while opt not in ['t', 's', 'm', 'q']:
+                print("========================================================================")
+                print     (" <> Options:")
+                printColor("    [h] --> Show conflicting content.", "blue")
+                print     ("    [t] --> Choose content of merge target.")
+                print     ("    [s] --> Choose content of merge source.")
+                print     ("    [m] --> Manual conflict resolution.")
+                printColor("    [q] --> Quit merging...", "red")
+                print("========================================================================")
+                opt = input("Please provide an option: ").lower()
+                if opt not in ['t', 's', 'm', 'q']:
+                    printColor("Please choose a valid option!", "red")
+                if opt == 'h':
+                    print(_unidiff_output(sourceString, targetString))
+            if opt == 'q':
+                printColor(" <> Aborting merge...", "red", "red")
+                sys.exit(1)
+            elif opt == 't':
+                printColor(" <> '{}' file receives target content...".format(filename), "blue")
+                mergedContent = targetBlob.content
+                conflictSolved = True
+            elif opt == 's':
+                printColor(" <> '{}' file receives source content...".format(filename), "blue")
+                mergedContent = sourceBlob.content
+                conflictSolved = True
+            elif opt == 'm':
+                printColor("Resolving conflict for '{}'...".format(filename), "blue")
+                cacheFile(filename, cacheType="merge", fileContent=mergedContent.encode('utf-8'))
+                fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
+                with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
+                    mergedContent=editedContent.read()
+                try :
+                    mergedContentStr = mergedContent.decode(encoding='utf-8')
+                except:
+                    printColor("Could not validate merged content, please choose another option!", "red")
+                    continue
+                if "<<<<<<<" in mergedContentStr and "=======" in mergedContentStr and ">>>>>>>" in mergedContentStr:
+                    printColor("Found unsolved conflict, please resolve all conflicts or choose another option!", "red")
+                else: 
+                    conflictSolved = True
     metaData.append(mergedContent) 
     newBlob = Blob(b'?'.join(metaData))
     store(newBlob, objectsPath)

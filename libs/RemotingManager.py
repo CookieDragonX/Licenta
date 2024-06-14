@@ -1,6 +1,5 @@
 from utils.prettyPrintLib import printColor
 from libs.BasicUtils import dumpResource, getResource, safeWrite
-from libs.MergeManager import mergeSourceIntoTarget
 from libs.BranchingManager import checkoutSnapshot
 import paramiko
 import os
