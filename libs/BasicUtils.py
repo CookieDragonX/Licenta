@@ -114,12 +114,20 @@ def clearLocalData():
 
 def statDictionary(mode):
     dictionary={}
-    dictionary['mode']=mode.st_mode
-    dictionary['uid']=mode.st_uid
-    dictionary['gid']=mode.st_gid
-    dictionary['size']=mode.st_size
-    dictionary['mtime']=mode.st_mtime
-    dictionary['ctime']=mode.st_ctime
+    if mode == None:
+        dictionary['mode']='X'
+        dictionary['uid']='X'
+        dictionary['gid']='X'
+        dictionary['size']='X'
+        dictionary['mtime']='X'
+        dictionary['ctime']='X'
+    else:
+        dictionary['mode']=mode.st_mode
+        dictionary['uid']=mode.st_uid
+        dictionary['gid']=mode.st_gid
+        dictionary['size']=mode.st_size
+        dictionary['mtime']=mode.st_mtime
+        dictionary['ctime']=mode.st_ctime
     return dictionary
 
 def cacheFile(pathname, cacheType='index', fileContent=None):
