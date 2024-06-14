@@ -52,7 +52,7 @@ def test_branching1():
     #change file content
     with open("file.txt", 'w') as file:
         file.seek(0)
-        file.write("something new")
+        file.write("something different")
     subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "add", "file.txt"]
     )
@@ -66,7 +66,7 @@ def test_branching1():
     assert "Successfully commited changes on branch 'secondary_branch'" in result.stdout
     #switch back to master
     subprocess.run(
-        interpreter + [os.path.join(cookiePath, 'cookie'), "checkout", "master"]
+        interpreter + [os.path.join(cookiePath, 'cookie'), "checkout", "-r", "master"]
     )
     with open(os.path.join('.cookie', 'head'), 'r') as headFile:
         head=json.load(headFile)
@@ -117,7 +117,7 @@ def test_branching2():
     #change file content
     with open("file.txt", 'w') as file:
         file.seek(0)
-        file.write("something new")
+        file.write("something different11111111111111111111111111111111111111111111")
     subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "add", "file.txt"]
     )
@@ -138,7 +138,14 @@ def test_branching2():
     assert head["name"]=='master'
     with open("file.txt", 'r') as file:
         content=file.read()
-    assert "dummy content" in content
+    assert "something different" in content
+    result = subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "status"],
+        capture_output = True,
+        text = True 
+    )
+    #assert 'Files modified' in result.stdout
+    assert 'file.txt' in result.stdout
 
 def test_tagging():
     os.chdir(cookiePath)
@@ -182,7 +189,7 @@ def test_tagging():
     #change file content
     with open("file.txt", 'w') as file:
         file.seek(0)
-        file.write("something new")
+        file.write("something different")
     result=subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "add", "file.txt"],
         capture_output=True,
