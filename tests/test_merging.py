@@ -48,7 +48,7 @@ def test_merging1(monkeypatch):
     mergeSourceIntoTarget("master", "secondary_branch")
     with open("file.txt", "r") as fp:
         content = fp.read()
-    assert content == "something new"
+    assert content == "something different"
 
 def test_clean_merge():
     result = subprocess.run(
