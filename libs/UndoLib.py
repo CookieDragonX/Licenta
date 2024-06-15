@@ -73,29 +73,29 @@ def undo_remove(args, indexToUndo):
 def undo_checkout(args,indexToUndo):
     oldHead = getResource("head", specificPath=os.path.join(".cookie", "cache", "undo_cache", str(indexToUndo)))
     if oldHead["name"]=='DETACHED':
-        checkoutSnapshot(oldHead["hash"])
+        checkoutSnapshot(None, specRef=oldHead["hash"], reset=args["r"], force=args["f"])
     else:
-        checkoutSnapshot(oldHead["name"])
+        checkoutSnapshot(None, specRef=oldHead["name"], reset=args["r"], force=args["f"])
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
 
 def undo_delete_branch(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
-    os.makedirs(undoCachePath, exist_ok=True)
-    with open(os.path.join(undoCachePath, args["tag"]), "r") as deletedBranchFile:
+    #os.makedirs(undoCachePath, exist_ok=True)
+    with open(os.path.join(undoCachePath, args["branch"]), "r") as deletedBranchFile:
         sha=deletedBranchFile.read().strip()
-    createBranch(args["tag"], currentRef=False, ref=sha)
+    createBranch(args["branch"], currentRef=False, ref=sha)
 
 def undo_create_tag(args,indexToUndo):
     deleteTag(args["tag"])
 
 def undo_delete_tag(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
-    os.makedirs(undoCachePath, exist_ok=True)
+    #os.makedirs(undoCachePath, exist_ok=True)
     with open(os.path.join(undoCachePath, args["tag"]), "r") as deletedTagFile:
         sha=deletedTagFile.read().strip()
-    createTag(args["tag"], currentRef=False, ref=sha, checkout=True)
+    createTag(args["tag"], currentRef=False, ref=sha, checkout = False)
 
 def undo_login(args,indexToUndo):
     restoreResource(indexToUndo, "userdata")

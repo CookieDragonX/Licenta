@@ -3,15 +3,19 @@ import json
 import subprocess
 import shutil
 from libs.BasicUtils import getResource
+import pytest
 
 if os.name == 'nt':
     interpreter = ["py", "-3"]
 else:
     interpreter = ["python3"]
 
+IGNORE_BASIC_TESTS=False
+
 cookiePath=os.getcwd()
 
-
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_init():
     if os.path.exists("Test_Repo"):
         shutil.rmtree("Test_Repo")
@@ -24,7 +28,8 @@ def test_init():
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'unstaged'))
     assert os.path.isfile(os.path.join('Test_Repo', '.cookie', 'userdata'))
 
-
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_status():
     os.chdir("Test_Repo")
     result = subprocess.run(
@@ -44,6 +49,8 @@ def test_status():
     assert "Files untracked" in result.stdout
     assert "Unstaged changes:" in result.stdout
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_add():
     subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "add", "file.txt"],
@@ -59,6 +66,8 @@ def test_add():
     assert "Files added" in result.stdout
     assert "Unstaged changes:" not in result.stdout
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_login():
     test_user="Awesome_User"
     test_email="totally_valid_address@gmail.com"
@@ -72,7 +81,8 @@ def test_login():
     assert userdata["user"]==test_user
     assert userdata["email"]==test_email
 
-
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_commit():
     subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "Added file.txt"],
@@ -84,6 +94,8 @@ def test_commit():
     assert head["name"]=="master"
     assert head["hash"]!=""
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_add2():
     os.makedirs(os.path.join("dir1", "dir2"))
     with open(os.path.join("dir1", "dir2", "nestedFile"), "w") as fp:
@@ -104,6 +116,8 @@ def test_add2():
     assert "Files deleted" in result.stdout
     assert "file.txt" in result.stdout
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_commit2():
     subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "Removed file.txt& added nested file"],
@@ -113,6 +127,8 @@ def test_commit2():
     assert "file.txt" not in index
     assert os.path.join("dir1", "dir2", "nestedFile") in index
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_modified():
     with open(os.path.join("blah.txt"), "w") as testFile:
         testFile.write("content")
@@ -131,6 +147,8 @@ def test_modified():
     )
     assert "-->Files modified:" in result.stdout
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_renamed():
     with open(os.path.join("blah.txt"), "w") as testFile:
         testFile.write("content")
@@ -155,6 +173,8 @@ def test_renamed():
     assert "blah.txt" not in index
     assert "new.txt" in index
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_copied():
     os.makedirs("somedir", exist_ok=True)
     with open(os.path.join("somedir", "new_copy.txt"), "w") as testFile:
@@ -174,6 +194,8 @@ def test_copied():
         interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "copy new.txt to somedir"],
     )
 
+@pytest.mark.skipif(IGNORE_BASIC_TESTS,
+                    reason="IGNORE_BASIC_TESTS is True")
 def test_cleanup_basic():
     result = subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],

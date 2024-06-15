@@ -28,12 +28,6 @@ def store(object, objectsPath):
         os.mkdir(os.path.join(objectsPath, id[:2]))
     safeWrite(os.path.join(objectsPath, id[:2], id[2:]), object.getMetaData(), binary=True)
 
-def getHash(path): #only Blob but not really an useful method
-    with open(path, 'r+b') as fp:
-        fileContent=fp.read()
-    blobContent=b'?'.join([b'B', bytes(path, "utf-8"), fileContent])
-    return sha1(blobContent.encode(encoding='utf-8'))
-
 def createBlob(path, forcePath=None):
     with open(path, 'r+b') as fp:
         fileContent=fp.read()
@@ -50,21 +44,6 @@ def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):
         objType=object.read(1)
     return objType
 
-def getMetaData(hash,objectsPath):
-    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r+b') as object:
-        return object.read().decode(encoding='utf-8')
-    
-def hashTree(dir, objectsPath):
-    metaData=['T']
-    for pathname in os.listdir(dir):
-        if os.path.isdir(pathname):
-            treeHash=hashTree(dir)
-            metaData.extend([pathname, treeHash])
-        elif os.path.isfile(pathname):
-            metaData.extend([pathname, getHash(pathname)])
-    tree=Tree('?'.join(metaData))
-    store(tree, objectsPath)
-    return tree.getHash()
 
 def getSnapshotFromCommit(hash, objectsPath):
     commit=load(hash, objectsPath)
