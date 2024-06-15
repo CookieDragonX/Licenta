@@ -6,8 +6,8 @@ import shutil
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
 from libs.RemotingManager import editLoginFile, cloneRepo, remoteConfig, pullChanges, pushChanges, fetchChanges
-from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles 
-from libs.BranchingManager import checkoutSnapshot, createBranch, updateHead, deleteBranch, createTag, deleteTag
+from libs.IndexManager import stageFiles, generateStatus, createCommit, unstageFiles, deleteAddedFiles, clearStagedFiles
+from libs.BranchingManager import checkoutSnapshot, createBranch, deleteBranch, createTag, deleteTag
 from libs.BasicUtils import createDirectoryStructure, dumpResource, getResource, safeWrite, clearCommand, checkRepositoryInSubdirs
 from libs.UndoLib import undoCommand
 from libs.MergeManager import mergeSourceIntoTarget
@@ -112,6 +112,9 @@ argsp.add_argument("-r",
 argsp.add_argument("-f",
                    action='store_true',
                    help="Option to force checkout on same branch.")
+argsp.add_argument("-d",
+                   action='store_true',
+                   help="Delete added files.")
 
 #Branch creation subcommand definition
 argsp = argsubparsers.add_parser("create_branch", help="Create a new branch.")
@@ -416,8 +419,11 @@ def remove(args):
 @cookieRepoCertified
 @addToUndoCache(saveResource=["head"])
 def checkout(args):
-    #generateStatus(args, quiet=True) HERE
     checkoutSnapshot(args, reset = args.r, force = args.f)
+    clearStagedFiles()
+    if args.d:
+        generateStatus(args, quiet=True)
+        deleteAddedFiles()
 
 @cookieRepoCertified
 @addToUndoCache()

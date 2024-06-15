@@ -634,3 +634,10 @@ def printUnstaged():
         return True
     return False
     
+def clearStagedFiles():
+    dumpResource("staged", {"A":{},"C":{},"D":{},"M":{},"R":{},"T":{},"X":{}})
+    
+def deleteAddedFiles():
+    unstaged=getResource("unstaged")
+    for file in unstaged["A"]:
+        os.remove(file)
