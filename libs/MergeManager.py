@@ -126,7 +126,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             mergedContent = sourceBlob.content
     else:
         mergedContent, hasConflict = merge(sourceString, targetString, baseString)
-
+        mergedContent = mergedContent.encode("utf-8")
     if hasConflict and not dataIsBinary:
         printColor("Found conflict in file '{}'.".format(filename), "red")
         opt = None
@@ -159,7 +159,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
                 conflictSolved = True
             elif opt == 'm':
                 printColor("Resolving conflict for '{}'...".format(filename), "cyan")
-                cacheFile(filename, cacheType="merge", fileContent=mergedContent.encode('utf-8'))
+                cacheFile(filename, cacheType="merge", fileContent=mergedContent)
                 fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
                 with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
                     mergedContent=editedContent.read()
@@ -172,6 +172,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
                     printColor("Found unsolved conflict, please resolve all conflicts or choose another option!", "red")
                 else: 
                     conflictSolved = True
+            opt = None
     metaData.append(mergedContent) 
     newBlob = Blob(b'?'.join(metaData))
     store(newBlob, objectsPath)
