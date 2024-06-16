@@ -50,8 +50,8 @@ def createCommit(args, DEBUG=False):
         sys.exit(1)
     generateStatus(args,quiet=True)
     if not isThereStagedStuff():
-        printColor("There is noting to commit...", "blue")
-        printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        printColor("There is noting to commit...", "cyan")
+        printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","cyan")
         sys.exit(1) 
     
     metaData=['C']
@@ -81,53 +81,84 @@ def createCommit(args, DEBUG=False):
     head["hash"]=newCommit.getHash()
     currentBranch=head["name"]
     dumpResource("head", head)
-    
     resetStagingAreaAndIndex(ignoreDirs)
     updateBranchSnapshot()
     printColor("Successfully commited changes on branch '{}'".format(currentBranch),"green")
-    printColor("Current commit hash: '{}'".format(newCommit.getHash()), 'green')
+    printColor("    <> Current commit hash: '{}'".format(newCommit.getHash()), 'green')
+    history = getResource("history")
+    cacheFile(os.path.join(str(history["index"]+1), "new_commit"), cacheType="undo", fileContent=newCommit.getHash(), binary = False)
+
 
 def generateSnapshot(targetDirs, ignoreDirs):
     index=getResource("index")
-    return TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
+    snapshot =  TreeHash(".", index, os.path.join('.cookie', 'objects'), targetDirs, ignoreDirs)
+    dumpResource("index", index)
+    return snapshot
 
 def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
     metaData=['T']
-    for file in os.listdir(dir):
-        if dir=='.':
-            pathname=file
-        else:
-            pathname=os.path.join(dir,file)
-        if pathname == '.cookie' or pathname == '.git' or pathname in ignoreDirs:
-            continue
-        if pathname not in targetDirs: 
-            if pathname in index:
-                metaData.append(pathname)
-                metaData.append(index[pathname]['hash']) #case where there's an unmodified file in the repo
-            elif os.path.isdir(pathname): 
+    dirDeleted = False
+    try:
+        for file in os.listdir(dir):
+            if dir=='.':
+                pathname=file
+            else:
+                pathname=os.path.join(dir,file)
+            if '.cookie' in pathname or '.git' in pathname or pathname in ignoreDirs:
+                continue
+            if pathname not in targetDirs: 
+                if pathname in index:
+                    metaData.append(pathname)
+                    metaData.append(index[pathname]['hash']) #case where there's an unmodified file in the repo
+                elif os.path.isdir(pathname): 
+                    metaData.append(pathname)
+                    metaData.append(TreeHash(pathname, index, objectsPath, targetDirs, ignoreDirs))
+                else:
+                    #case where file is not tracked 
+                    pass
+            elif os.path.isdir(pathname):
                 metaData.append(pathname)
                 metaData.append(TreeHash(pathname, index, objectsPath, targetDirs, ignoreDirs))
             else:
-                #case where file is not tracked 
+                metaData.append(pathname)
+                metaData.append(addFileToIndex(pathname, index))
+    except FileNotFoundError:
+        dirDeleted = True
+        pass
+    try:
+        for file in os.listdir(os.path.join(".cookie", "cache", "index_cache", dir)):
+            if dir=='.':
+                realPath = file
+                pathname=os.path.join(".cookie", "cache", "index_cache", file)
+            else:
+                realPath=os.path.join(dir,file)
+                pathname=os.path.join(".cookie", "cache", "index_cache", "dir", file)
+            if dirDeleted:
                 pass
-        elif os.path.isdir(pathname):
-            metaData.append(pathname)
-            metaData.append(TreeHash(pathname, index, objectsPath, targetDirs, ignoreDirs))
-        else:
-            metaData.append(pathname)
-            metaData.append(addFileToIndex(pathname))
+            elif os.path.exists(realPath):
+                continue
+            if os.path.isdir(pathname):
+                metaData.append(realPath)
+                metaData.append(TreeHash(realPath, index, objectsPath, targetDirs, ignoreDirs))
+            else:
+                metaData.append(realPath)
+                metaData.append(addFileToIndex(realPath, index))
+    except FileNotFoundError:
+        printColor("[DEV ERROR][TreeHash] File cached incorrectly!", "red")
+        sys.exit(1)
     tree=Tree('?'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
 
-def addFileToIndex(pathname):
-    index=getResource("index")
-    mode = os.lstat(pathname)
-    blob = createBlob(os.path.join('.cookie', 'cache', "index_cache", pathname), forcePath=pathname)
+def addFileToIndex(pathname, index):
+    if os.path.exists(pathname):
+        mode = os.lstat(pathname)
+    else:
+        mode = os.lstat(os.path.join('.cookie', 'cache', "index_cache", pathname))
+    blob = createBlob(os.path.join('.cookie', 'cache', "index_cache", pathname))
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
-    dumpResource("index", index)
     return blob.getHash()
 
 def compareToIndex():
@@ -185,7 +216,7 @@ def resolveAddedStaging(pathname, staged, index):
 
 
 def resolveDeletedStaging(pathname, staged, index):   
-    # pass WHEN FILE IS DELETED BUT IS IN STAGED['A'] OR STAGED['M'] REMOVE FROM THERE!!!
+    # pass WHEN FILE IS DELETED BUT IS IN STAGED REMOVE FROM THERE!!!
     if pathname in staged['A']:
         del staged['D'][pathname]
         del staged['A'][pathname]
@@ -346,6 +377,8 @@ def populateDifferences(dir, index, staged, differences):
         del itemData['ctime']
         stats = statDictionary(mode)
         del stats['ctime']
+        # print(stats)                                                  #DEBUG FOR RANDOM MODIFIED FILES
+        # print(itemData)
         if itemData!=stats and not S_ISDIR(mode.st_mode):
             if item not in staged["M"]:
                 differences['M'].update({item: statDictionary(mode)})
@@ -399,21 +432,24 @@ def populateDifferences(dir, index, staged, differences):
     return differences
 
 def findNewFiles(dir, index, staged, differences):
-    for file in os.listdir(dir):
-        if file=='.cookie' or file=='.git' :
-            continue
-        if dir=='.':
-            pathname=file
-        else:
-            pathname = os.path.join(dir, file)
-        mode = os.lstat(pathname)
-        if S_ISREG(mode.st_mode) and pathname not in index and pathname not in staged['A'] and pathname not in staged['D'] and pathname not in staged['C'] and pathname not in staged['R'] and pathname not in staged['X']:
-            if S_ISREG(mode.st_mode):
-                differences['A'].update({pathname: statDictionary(mode)})
-            elif not S_ISDIR(mode.st_mode):
-                print('Skipping %s, unknown file type' % pathname)
-        elif S_ISDIR(mode.st_mode):
-            differences.update(findNewFiles(pathname, index, staged, differences))
+    try:
+        for file in os.listdir(dir):
+            if file=='.cookie' or file=='.git' :
+                continue
+            if dir=='.':
+                pathname=file
+            else:
+                pathname = os.path.join(dir, file)
+            mode = os.lstat(pathname)
+            if S_ISREG(mode.st_mode) and pathname not in index and pathname not in staged['A'] and pathname not in staged['D'] and pathname not in staged['C'] and pathname not in staged['R'] and pathname not in staged['X']:
+                if S_ISREG(mode.st_mode):
+                    differences['A'].update({pathname: statDictionary(mode)})
+                elif not S_ISDIR(mode.st_mode):
+                    print('Skipping %s, unknown file type' % pathname)
+            elif S_ISDIR(mode.st_mode):
+                differences.update(findNewFiles(pathname, index, staged, differences))
+    except PermissionError:
+        printColor("Do not have access to files in {} directory, ignoring...", "red")
     return differences
 
 
@@ -468,7 +504,7 @@ def generateStatus(args, quiet=True):
         outputUnstaged=False
         outputUnstaged=printUnstaged()
         if not outputStaged and not outputUnstaged:
-            printColor("Nothing new here! No changes found.", "blue")
+            printColor("Nothing new here! No changes found.", "cyan")
 
 def stageFiles(paths):
     head=getResource("head")
@@ -492,7 +528,11 @@ def stageFiles(paths):
         pathname=os.path.relpath(pathname, "")
         if pathname in unstaged['A']:
             staged['A'][pathname]=statDictionary(os.lstat(pathname))
-            cacheFile(pathname)
+            try:
+                cacheFile(pathname)
+            except PermissionError:
+                printColor("No permission for file '{}', cannot add", "red")
+                continue
             resolveAddedStaging(pathname, staged, index)
             del unstaged['A'][pathname]
         elif pathname in unstaged['D']:
@@ -506,7 +546,11 @@ def stageFiles(paths):
             del unstaged['D'][pathname]
         elif pathname in unstaged['M']:
             staged['M'][pathname]=statDictionary(os.lstat(pathname))
-            cacheFile(pathname)
+            try:
+                cacheFile(pathname)
+            except PermissionError:
+                printColor("No permission for file '{}', cannot add", "red")
+                continue
             resolveModifiedStaging(pathname, staged, index)
             del unstaged['M'][pathname]
         else:
@@ -629,7 +673,7 @@ def printUnstaged():
         if unstaged['M']!={}:
             printColor("-->Files modified:",'red')
             print(*["   {}".format(file) for file in unstaged['M']], sep=os.linesep)
-        printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","blue")
+        printColor("    Use 'cookie add <filename>' in order to prepare any change for commit.","cyan")
         printColor("-----------------------------------------------------------------", "white")
         return True
     return False

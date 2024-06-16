@@ -364,7 +364,7 @@ def addToUndoCache(fct, saveResource=[]):
         commandData=vars(args[0])
         if commandData["command"]=="delete":
             printColor("There's no undo-ing this...", "red")
-            printColor("Clone Repository again!", "blue")
+            printColor("Clone Repository again!", "cyan")
         else:
             history["commands"][index+1]=commandData
             history["index"]=history["index"]+1

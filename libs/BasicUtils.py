@@ -94,6 +94,8 @@ def checkRepositoryInSubdirs(path):
         os.makedirs(path)
     except FileExistsError:
         pass
+    except:
+        return
     for pathname in os.listdir(path):
         if pathname == '.cookie':
             printColor("Found another cookie repository at '{}'...".format(path), "red")
@@ -130,17 +132,18 @@ def statDictionary(mode):
         dictionary['ctime']=mode.st_ctime
     return dictionary
 
-def cacheFile(pathname, cacheType='index', fileContent=None):
+def cacheFile(pathname, cacheType='index', fileContent=None, binary = True):
     if not fileContent:
         with open(pathname, 'r+b') as fileToCache:
             fileContent=fileToCache.read()
+
 
     if cacheType not in ['undo', 'merge', 'index', 'remote']:
         printColor("[DEV ERROR][cacheFile] unknown cache type received '{}'!".format(cacheType), "red")
         sys.exit(1)
     else:
         cacheTypeDir = "{}_cache".format(cacheType)
-    safeWrite(os.path.join('.cookie', 'cache', cacheTypeDir, pathname), fileContent, binary=True)
+    safeWrite(os.path.join('.cookie', 'cache', cacheTypeDir, pathname), fileContent, binary=binary)
 
 def clearCommand():
     opt = None

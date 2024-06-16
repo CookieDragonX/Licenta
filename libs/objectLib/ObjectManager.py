@@ -28,13 +28,10 @@ def store(object, objectsPath):
         os.mkdir(os.path.join(objectsPath, id[:2]))
     safeWrite(os.path.join(objectsPath, id[:2], id[2:]), object.getMetaData(), binary=True)
 
-def createBlob(path, forcePath=None):
+def createBlob(path):
     with open(path, 'r+b') as fp:
         fileContent=fp.read()
-    if forcePath:
-        metaData=b'?'.join([b'B', bytes(forcePath, "utf-8"), fileContent])
-    else:
-        metaData=b'?'.join([b'B', bytes(path, "utf-8"), fileContent])
+    metaData=b'?'.join([b'B', bytes(path, "utf-8"), fileContent])
     return Blob(metaData)
 
 def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):

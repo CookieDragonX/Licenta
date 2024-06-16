@@ -327,8 +327,8 @@ def pushChanges(args):
     except:
         pass
     if isLocked(sftp, remotePath):
-        printColor("Another user currently pushing.", "blue")
-        printColor("    <> Waiting to finish...", "blue")
+        printColor("Another user currently pushing.", "cyan")
+        printColor("    <> Waiting to finish...", "cyan")
     while isLocked(sftp, remotePath):
         time.sleep(1)
     try:

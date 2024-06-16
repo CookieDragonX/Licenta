@@ -9,7 +9,13 @@ import shutil
 def restoreResource(index, resource_name):
     oldResource = getResource(resource_name, specificPath=os.path.join(".cookie", "cache", "undo_cache", str(index)))
     dumpResource(resource_name, oldResource)
-    
+
+def getCacheContent(index, resource_name):
+    with open(os.path.join(".cookie", "cache", "undo_cache", str(index), resource_name), "r") as cacheFile:
+        cacheContent = cacheFile.read()
+    return cacheContent
+        
+
 def clearCache(index):
     shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
 
@@ -25,7 +31,7 @@ def undoCommand(args):
         indexToUndo=str(history["index"])
 
     prevArgs=history["commands"][indexToUndo] #to do, format specific command for each thing
-    printColor("Undoing '{}'".format(prevArgs), "blue")
+    printColor("Undoing '{}'".format(prevArgs), "cyan")
     if prevArgs["command"] == 'add':
         undo_add(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'remove':
@@ -107,6 +113,8 @@ def undo_merge(args, indexToUndo):
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
+    new_commit = getCacheContent(indexToUndo, "new_commit")
+    os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
     clearCache(indexToUndo)
 
 def undo_commit(args, indexToUndo):
@@ -115,6 +123,11 @@ def undo_commit(args, indexToUndo):
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
+    try:
+        new_commit = getCacheContent(indexToUndo, "new_commit")
+        os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
+    except FileNotFoundError:
+        pass
     clearCache(indexToUndo)
 
 def undo_rconfig(args, indexToUndo):
