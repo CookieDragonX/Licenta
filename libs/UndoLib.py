@@ -128,6 +128,12 @@ def undo_commit(args, indexToUndo):
         os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
     except FileNotFoundError:
         pass
+    try:
+        shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+    except FileNotFoundError:
+        pass
+    #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+    shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
     clearCache(indexToUndo)
 
 def undo_rconfig(args, indexToUndo):

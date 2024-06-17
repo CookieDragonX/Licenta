@@ -12,6 +12,7 @@ from libs.RemotingManager import getRemoteResource
 from copy import deepcopy
 import paramiko
 import traceback
+import shutil
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
     for file in os.listdir(dir):
@@ -87,7 +88,7 @@ def createCommit(args, DEBUG=False):
     printColor("    <> Current commit hash: '{}'".format(newCommit.getHash()), 'green')
     history = getResource("history")
     cacheFile(os.path.join(str(history["index"]+1), "new_commit"), cacheType="undo", fileContent=newCommit.getHash(), binary = False)
-
+    shutil.move(os.path.join(".cookie", "cache", "index_cache"), os.path.join(".cookie", "cache", "undo_cache", str(history["index"]+1), "index_cache"))
 
 def generateSnapshot(targetDirs, ignoreDirs):
     index=getResource("index")
