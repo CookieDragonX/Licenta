@@ -2,7 +2,7 @@ import sys
 import os
 from utils.prettyPrintLib import printColor
 from libs.IndexManager import unstageFiles, stageFiles
-from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, deleteTag, createTag
+from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, deleteTag, createTag, resetToSnapshot
 from libs.BasicUtils import getResource, dumpResource
 import shutil
 
@@ -121,6 +121,8 @@ def undo_merge(args, indexToUndo):
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
+    head = getResource("head")
+    resetToSnapshot(head["hash"], reset=True)
     new_commit = getCacheContent(indexToUndo, "new_commit")
     os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
     clearCache(indexToUndo)

@@ -361,7 +361,7 @@ def createMergeCommit(target, source, commitToBranch=None):
                 refs["B"][target] = newCommit.getHash()
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=newCommit.getHash())
-                    resetToSnapshot(newCommit.snapshot, reset=True)
+                    resetToSnapshot(newCommit.snapshot, reset=True, force=True)
             dumpResource("refs", refs)
             history = getResource("history")
             cacheFile(os.path.join(str(history["index"]+1), "new_commit"), cacheType="undo", fileContent=newCommit.getHash(), binary = False)
