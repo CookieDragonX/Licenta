@@ -7,7 +7,8 @@ BUILD REQUIREMENTS:
 - pyinstaller: https://pyinstaller.org/en/stable/
 - libraries: shutil, paramiko, diff-match-patch, psutil, termcolor, colorama (install with pip)
 
-BUILD COMMAND: "pyinstaller cookie"
+BUILD COMMAND: "pyinstaller cookie"</br>
+("pyinstaller cookie -noconfirm" to auto replace old binaries)</br>
   - exe at 'C:\<LOCAL PATH>\dist\cookie\cookie.exe'
   - create env variable with 'C:\<LOCAL PATH>\dist\cookie'
 
