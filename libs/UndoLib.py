@@ -2,14 +2,20 @@ import sys
 import os
 from utils.prettyPrintLib import printColor
 from libs.IndexManager import unstageFiles, stageFiles
-from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, deleteTag, createTag
+from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, deleteTag, createTag, resetToSnapshot
 from libs.BasicUtils import getResource, dumpResource
 import shutil
 
 def restoreResource(index, resource_name):
     oldResource = getResource(resource_name, specificPath=os.path.join(".cookie", "cache", "undo_cache", str(index)))
     dumpResource(resource_name, oldResource)
-    
+
+def getCacheContent(index, resource_name):
+    with open(os.path.join(".cookie", "cache", "undo_cache", str(index), resource_name), "r") as cacheFile:
+        cacheContent = cacheFile.read()
+    return cacheContent
+        
+
 def clearCache(index):
     shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
 
@@ -25,7 +31,7 @@ def undoCommand(args):
         indexToUndo=str(history["index"])
 
     prevArgs=history["commands"][indexToUndo] #to do, format specific command for each thing
-    printColor("Undoing '{}'".format(prevArgs), "blue")
+    printColor("Undoing '{}'".format(prevArgs), "cyan")
     if prevArgs["command"] == 'add':
         undo_add(prevArgs, indexToUndo)
     elif prevArgs["command"] == 'remove':
@@ -76,6 +82,14 @@ def undo_checkout(args,indexToUndo):
         checkoutSnapshot(None, specRef=oldHead["hash"], reset=args["r"], force=args["f"])
     else:
         checkoutSnapshot(None, specRef=oldHead["name"], reset=args["r"], force=args["f"])
+    restoreResource("staged")
+    try:
+        shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+    except FileNotFoundError:
+        pass
+    #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+    shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    clearCache(indexToUndo)
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
@@ -107,6 +121,10 @@ def undo_merge(args, indexToUndo):
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
+    head = getResource("head")
+    resetToSnapshot(head["hash"], reset=True)
+    new_commit = getCacheContent(indexToUndo, "new_commit")
+    os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
     clearCache(indexToUndo)
 
 def undo_commit(args, indexToUndo):
@@ -115,6 +133,17 @@ def undo_commit(args, indexToUndo):
     restoreResource(indexToUndo, "logs")
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
+    try:
+        new_commit = getCacheContent(indexToUndo, "new_commit")
+        os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
+    except FileNotFoundError:
+        pass
+    try:
+        shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+    except FileNotFoundError:
+        pass
+    #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+    shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
     clearCache(indexToUndo)
 
 def undo_rconfig(args, indexToUndo):

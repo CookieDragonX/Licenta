@@ -119,14 +119,14 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             printColor(" <> Aborting merge...", "red", "red")
             sys.exit(1)
         elif opt == 't':
-            printColor(" <> '{}' file receives target content...".format(filename), "blue")
+            printColor(" <> '{}' file receives target content...".format(filename), "cyan")
             mergedContent = targetBlob.content
         elif opt == 's':
-            printColor(" <> '{}' file receives source content...".format(filename), "blue")
+            printColor(" <> '{}' file receives source content...".format(filename), "cyan")
             mergedContent = sourceBlob.content
     else:
         mergedContent, hasConflict = merge(sourceString, targetString, baseString)
-
+        mergedContent = mergedContent.encode("utf-8")
     if hasConflict and not dataIsBinary:
         printColor("Found conflict in file '{}'.".format(filename), "red")
         opt = None
@@ -135,7 +135,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
             while opt not in ['t', 's', 'm', 'q']:
                 print("========================================================================")
                 print     (" <> Options:")
-                printColor("    [h] --> Show conflicting content.", "blue")
+                printColor("    [h] --> Show conflicting content.", "cyan")
                 print     ("    [t] --> Choose content of merge target.")
                 print     ("    [s] --> Choose content of merge source.")
                 print     ("    [m] --> Manual conflict resolution.")
@@ -150,16 +150,16 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
                 printColor(" <> Aborting merge...", "red", "red")
                 sys.exit(1)
             elif opt == 't':
-                printColor(" <> '{}' file receives target content...".format(filename), "blue")
+                printColor(" <> '{}' file receives target content...".format(filename), "cyan")
                 mergedContent = targetBlob.content
                 conflictSolved = True
             elif opt == 's':
-                printColor(" <> '{}' file receives source content...".format(filename), "blue")
+                printColor(" <> '{}' file receives source content...".format(filename), "cyan")
                 mergedContent = sourceBlob.content
                 conflictSolved = True
             elif opt == 'm':
-                printColor("Resolving conflict for '{}'...".format(filename), "blue")
-                cacheFile(filename, cacheType="merge", fileContent=mergedContent.encode('utf-8'))
+                printColor("Resolving conflict for '{}'...".format(filename), "cyan")
+                cacheFile(filename, cacheType="merge", fileContent=mergedContent)
                 fileEditProcess(os.path.join('.cookie', 'cache', 'merge_cache', filename))
                 with open(os.path.join('.cookie', 'cache', 'merge_cache', filename), "r+b") as editedContent:
                     mergedContent=editedContent.read()
@@ -172,6 +172,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
                     printColor("Found unsolved conflict, please resolve all conflicts or choose another option!", "red")
                 else: 
                     conflictSolved = True
+            opt = None
     metaData.append(mergedContent) 
     newBlob = Blob(b'?'.join(metaData))
     store(newBlob, objectsPath)
@@ -360,10 +361,11 @@ def createMergeCommit(target, source, commitToBranch=None):
                 refs["B"][target] = newCommit.getHash()
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=newCommit.getHash())
-                    resetToSnapshot(newCommit.snapshot, reset=True)
+                    resetToSnapshot(newCommit.snapshot, reset=True, force=True)
             dumpResource("refs", refs)
+            history = getResource("history")
+            cacheFile(os.path.join(str(history["index"]+1), "new_commit"), cacheType="undo", fileContent=newCommit.getHash(), binary = False)
             printColor("Successfully committed merge to branch '{}'.".format(target), "green")
-
 
 def getMergeBase(target, source):
     logs = getResource("logs")

@@ -5,6 +5,7 @@ import sys
 from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
+import shutil
 
 def checkoutSnapshot(args, specRef = None, force=False, reset=False):
     refType=None
@@ -14,13 +15,13 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
         ref = specRef
     head=getResource("head")
     if head["name"] == ref and not force:
-        printColor("Already on branch {}!".format(head["name"]), "blue")
+        printColor("Already on branch {}!".format(head["name"]), "cyan")
         sys.exit(1)
     new_head='DETACHED'
     objectsPath = os.path.join('.cookie', 'objects')
     if ref == None:
-        printColor("This does nothing, but is allowed. Give me some arguments!", "blue")
-        sys.exit(0)
+        printColor("Please provide the reference point to checkout!", "cyan")
+        sys.exit(1)
     refs=getResource("refs")
     if ref not in refs['B'] and ref not in refs['T']:
         try:
@@ -50,6 +51,13 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
             sys.exit(1)
     resetToSnapshot(snapshot, reset)
     updateHead(new_head, currentRef=False, ref=commitHash, tag=(refType=='T'))
+    printColor("    <> Current commit hash: '{}'".format(commitHash), "green" )
+    history = getResource("history")
+    try:
+        shutil.move(os.path.join(".cookie", "cache", "index_cache"), os.path.join(".cookie", "cache", "undo_cache", str(history["index"]+1), "index_cache"))
+    except FileNotFoundError:
+        # checkout one after another, index_cache missing at that moment
+        pass
 
 def resetToSnapshot(hash, reset=False):
     objectsPath = os.path.join('.cookie', 'objects')
@@ -77,8 +85,12 @@ def updateTree(tree, index, objectsPath, reset):
                     else:
                         index[path] = statDictionary(None)
                     index[path]['hash'] = hash
+                else:
+                    mode = os.lstat(path)
+                    index[path] = statDictionary(mode)
+                    index[path]['hash'] = hash
             except FileNotFoundError:
-                if reset:
+                if reset:   
                     safeWrite(path, object.content, binary=True)
                     mode = os.lstat(path)
                     index[path] = statDictionary(mode)

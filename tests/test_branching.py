@@ -178,6 +178,19 @@ def test_branching3():
         content=file.read()
     assert "something different" in content
 
+
+@pytest.mark.skipif(IGNORE_BRANCHING_TESTS,
+                    reason="IGNORE_BRANCHING_TESTS is True")
+def test_branching4():
+    # at the end of test_branching1() we are on master with one commit
+    test_branching1()
+    with open('new_file.txt', 'w') as fp:
+        pass
+    subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "checkout", "secondary_branch", "-rdf"],
+    )
+    assert not os.path.exists("new_file.txt")
+
 @pytest.mark.skipif(IGNORE_BRANCHING_TESTS,
                     reason="IGNORE_BRANCHING_TESTS is True")
 def test_cleanup_branching():
