@@ -417,7 +417,7 @@ def remove(args):
     unstageFiles(args.paths)
 
 @cookieRepoCertified
-@addToUndoCache(saveResource=["head"])
+@addToUndoCache(saveResource=["head", "staged"])
 def checkout(args):
     checkoutSnapshot(args, reset = args.r, force = args.f)
     clearStagedFiles()

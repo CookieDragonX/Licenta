@@ -164,7 +164,9 @@ def test_renamed():
         capture_output = True,
         text = True 
     )
+    print(result.stdout)
     assert "-->Files renamed:" in result.stdout
+    
     assert "{} --> {}".format("blah.txt", "new.txt") in result.stdout
     subprocess.run(
         interpreter + [os.path.join(cookiePath, 'cookie'), "commit", "-m", "rename blah.txt to new.txt"],

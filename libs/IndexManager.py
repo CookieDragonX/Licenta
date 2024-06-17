@@ -13,6 +13,7 @@ from copy import deepcopy
 import paramiko
 import traceback
 import shutil
+import traceback
 
 def getIndex(dir, data, targetDirs, ignoreTarget, ignoreDirs):
     for file in os.listdir(dir):
@@ -134,6 +135,8 @@ def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
             else:
                 realPath=os.path.join(dir,file)
                 pathname=os.path.join(".cookie", "cache", "index_cache", "dir", file)
+            if '.cookie' in realPath or '.git' in realPath or realPath in ignoreDirs:
+                continue
             if dirDeleted:
                 pass
             elif os.path.exists(realPath):
@@ -145,8 +148,7 @@ def TreeHash(dir, index, objectsPath, targetDirs, ignoreDirs):
                 metaData.append(realPath)
                 metaData.append(addFileToIndex(realPath, index))
     except FileNotFoundError:
-        printColor("[DEV ERROR][TreeHash] File cached incorrectly!", "red")
-        sys.exit(1)
+        pass
     tree=Tree('?'.join(metaData))
     store(tree, objectsPath)
     return tree.getHash()
