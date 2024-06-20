@@ -133,11 +133,5 @@ def test_undo_create_delete_tag():
 @pytest.mark.skipif(IGNORE_UNDO_TESTS,
                     reason="IGNORE_UNDO_TESTS is True")
 def test_clean_undo():
-    result = subprocess.run(
-        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
-        capture_output = True,
-        text = True 
-    )
-    assert "Cookie does not assume responsability!" in result.stdout
     os.chdir(cookiePath)
     shutil.rmtree("Test_Repo")

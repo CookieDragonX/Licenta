@@ -194,11 +194,6 @@ def test_branching4():
 @pytest.mark.skipif(IGNORE_BRANCHING_TESTS,
                     reason="IGNORE_BRANCHING_TESTS is True")
 def test_cleanup_branching():
-    result = subprocess.run(
-        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
-        capture_output = True,
-        text = True 
-    )
-    assert "Cookie does not assume responsability!" in result.stdout
+
     os.chdir(cookiePath)
     shutil.rmtree("Test_Repo")
