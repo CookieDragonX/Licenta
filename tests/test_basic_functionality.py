@@ -199,11 +199,11 @@ def test_copied():
 @pytest.mark.skipif(IGNORE_BASIC_TESTS,
                     reason="IGNORE_BASIC_TESTS is True")
 def test_cleanup_basic():
-    result = subprocess.run(
-        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
-        capture_output = True,
-        text = True 
-    )
-    assert "Cookie does not assume responsability!" in result.stdout
+    # result = subprocess.run(
+    #     interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
+    #     capture_output = True,
+    #     text = True 
+    # )
+    # assert "Cookie does not assume responsability!" in result.stdout
     os.chdir(cookiePath)
     shutil.rmtree("Test_Repo")

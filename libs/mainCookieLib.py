@@ -91,13 +91,13 @@ argsp.add_argument("-e",
                    default=None,
                    help="E-mail address.")
 
-#Delete subcommand definition
-argsp = argsubparsers.add_parser("delete", help="Delete repository at a certain location. ->DEBUG ONLY<-")
-argsp.add_argument("path",
-                   metavar="directory",
-                   nargs="?",
-                   default=os.getcwd(),
-                   help="Path to repo that needs deletion")
+# #Delete subcommand definition
+# argsp = argsubparsers.add_parser("delete", help="Delete repository at a certain location. ->DEBUG ONLY<-")
+# argsp.add_argument("path",
+#                    metavar="directory",
+#                    nargs="?",
+#                    default=os.getcwd(),
+#                    help="Path to repo that needs deletion")
 
 #Checkout subcommand definition
 argsp = argsubparsers.add_parser("checkout", help="Checkout a previous snapshot.")
@@ -305,8 +305,8 @@ def main(argv=sys.argv[1:]):
         status(args)
     elif args.command == 'login':           # login with username/email
         login(args)
-    elif args.command == 'delete':          # delete repo DEV ONLY!
-        delete(args)
+    # elif args.command == 'delete':          # delete repo DEV ONLY!
+    #     delete(args)
     elif args.command == 'undo':            # undo last command
         undo(args)
     elif args.command == 'log':             # log show commits
@@ -329,13 +329,6 @@ def main(argv=sys.argv[1:]):
         printColor("Unknown command: {}".format(args.command),'red')
         sys.exit(1)
 
-def parametrized(dec):
-    def layer(*args, **kwargs):
-        def repl(f):
-            return dec(f, *args, **kwargs)
-        return repl
-    return layer
-
 def cookieRepoCertified(fct):       #decorator for functions that work with objects to that everything happens at correct repo location
     def inner(*args, **kwargs):
         prevwd=""
@@ -352,6 +345,13 @@ def cookieRepoCertified(fct):       #decorator for functions that work with obje
         return rez
     return inner
 
+def parametrized(dec):
+    def layer(*args, **kwargs):
+        def repl(f):
+            return dec(f, *args, **kwargs)
+        return repl
+    return layer
+
 @parametrized
 def addToUndoCache(fct, saveResource=[]):
     def inner(*args, **kwargs):
@@ -362,13 +362,9 @@ def addToUndoCache(fct, saveResource=[]):
             safeWrite(os.path.join(".cookie", "cache", "undo_cache", str(index+1), resource_name), resource, jsonDump=True)
         rez=fct(*args, **kwargs)
         commandData=vars(args[0])
-        if commandData["command"]=="delete":
-            printColor("There's no undo-ing this...", "red")
-            printColor("Clone Repository again!", "cyan")
-        else:
-            history["commands"][index+1]=commandData
-            history["index"]=history["index"]+1
-            dumpResource("history", history)
+        history["commands"][index+1]=commandData
+        history["index"]=history["index"]+1
+        dumpResource("history", history)
         return rez
     return inner
 
@@ -393,16 +389,16 @@ def clone(args):
     print(cookieWordArt)
     cloneRepo(args)
 
-@cookieRepoCertified
-def delete(args):
-    if DEBUG:
-        shutil.rmtree('.cookie')
-        printColor(".cookie directory deleted. Files kept...", 'red')
-    else:
-        printColor("Command is for cookie developers only...", 'red')
-        printColor("Delete repo manually if needed.", "red")
-        printColor("Cookie does not assume responsability!", "red")
-        sys.exit(1)
+# @cookieRepoCertified
+# def delete(args):
+#     if DEBUG:
+#         shutil.rmtree('.cookie')
+#         printColor(".cookie directory deleted. Files kept...", 'red')
+#     else:
+#         printColor("Command is for cookie developers only...", 'red')
+#         printColor("Delete repo manually if needed.", "red")
+#         printColor("Cookie does not assume responsability!", "red")
+#         sys.exit(1)
 
 @cookieRepoCertified
 @addToUndoCache(saveResource=["staged"])

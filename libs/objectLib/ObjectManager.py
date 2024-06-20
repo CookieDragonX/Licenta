@@ -28,9 +28,13 @@ def store(object, objectsPath):
         os.mkdir(os.path.join(objectsPath, id[:2]))
     safeWrite(os.path.join(objectsPath, id[:2], id[2:]), object.getMetaData(), binary=True)
 
-def createBlob(path):
-    with open(path, 'r+b') as fp:
-        fileContent=fp.read()
+def createBlob(path, forceContent):
+    if forceContent:
+        with open(forceContent, 'r+b') as fp:
+            fileContent=fp.read()
+    else:
+        with open(path, 'r+b') as fp:
+            fileContent=fp.read()
     metaData=b'?'.join([b'B', bytes(path, "utf-8"), fileContent])
     return Blob(metaData)
 

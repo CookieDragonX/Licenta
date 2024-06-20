@@ -58,11 +58,5 @@ def test_merging1(monkeypatch):
 @pytest.mark.skipif(IGNORE_MERGING_TESTS,
                     reason="IGNORE_MERGING_TESTS is True")
 def test_clean_merge():
-    result = subprocess.run(
-        interpreter + [os.path.join(cookiePath, 'cookie'), "delete"],
-        capture_output = True,
-        text = True 
-    )
-    assert "Cookie does not assume responsability!" in result.stdout
     os.chdir(cookiePath)
     shutil.rmtree("Test_Repo")

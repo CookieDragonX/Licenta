@@ -8,7 +8,7 @@ if os.name == 'nt':
 else:
     interpreter = ["python3"]
 
-IGNORE_REMOTE_TESTS=True
+IGNORE_REMOTE_TESTS=False
 
 cookiePath=os.getcwd()
 

@@ -147,7 +147,7 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
                 if opt == 'h':
                     print(_unidiff_output(sourceString, targetString))
             if opt == 'q':
-                printColor(" <> Aborting merge...", "red", "red")
+                printColor(" <> Aborting merge...", "red")
                 sys.exit(1)
             elif opt == 't':
                 printColor(" <> '{}' file receives target content...".format(filename), "cyan")
@@ -361,7 +361,7 @@ def createMergeCommit(target, source, commitToBranch=None):
                 refs["B"][target] = newCommit.getHash()
                 if targetIsHead:
                     updateHead(target, currentRef=False, ref=newCommit.getHash())
-                    resetToSnapshot(newCommit.snapshot, reset=True, force=True)
+                    resetToSnapshot(newCommit.snapshot, reset=True)
             dumpResource("refs", refs)
             history = getResource("history")
             cacheFile(os.path.join(str(history["index"]+1), "new_commit"), cacheType="undo", fileContent=newCommit.getHash(), binary = False)

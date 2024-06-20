@@ -158,7 +158,7 @@ def addFileToIndex(pathname, index):
         mode = os.lstat(pathname)
     else:
         mode = os.lstat(os.path.join('.cookie', 'cache', "index_cache", pathname))
-    blob = createBlob(os.path.join('.cookie', 'cache', "index_cache", pathname))
+    blob = createBlob(pathname, forceContent=os.path.join('.cookie', 'cache', "index_cache", pathname))
     store(blob, os.path.join('.cookie', 'objects'))
     index[pathname]=statDictionary(mode)
     index[pathname].update({"hash":blob.getHash()})
