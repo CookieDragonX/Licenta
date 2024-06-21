@@ -105,7 +105,7 @@ def editLoginFile(args):
     printColor("Successfully logged in. Hello {}!".format(data["user"]), "green")
 
 def cloneRepo(args):
-    config = getResource(os.path.basename(args.config), specificPath=os.path.dirname(args.config))
+    config = getResource(os.path.basename(args.config), specificPath=os.path.dirname(args.config), rconfig=True)
     private_key = paramiko.RSAKey.from_private_key_file(config["local_ssh_private_key"])
     ssh_client = paramiko.SSHClient()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -124,7 +124,16 @@ def cloneRepo(args):
         sep = '/'
     full_remote_path = sep.join([config["remote_path"], "CookieRepositories", args.name])
     if args.path :
-        full_local_path = os.path.join(args.path, args.name)
+        full_local_path = args.path
+        try:
+            if os.listdir(full_local_path) != 0 :
+                printColor("Given directory '{}' exists and is not empty, please clear first!".format(full_local_path), "red")
+                sys.exit(1)
+        except FileNotFoundError:
+            pass
+        except NotADirectoryError:
+            printColor("Given path '{}' is not a directory".format(full_local_path), "red")
+            sys.exit(1)
     else:
         full_local_path = args.name
     
@@ -237,8 +246,11 @@ def pullChanges(args):
     ssh_client.close()
     
     refs = getResource("refs")
-    if refs["B"][head["name"]] != head["hash"]:             
-        checkoutSnapshot(None, specRef = refs["B"][head["name"]], force=True, reset=False)
+    if refs["B"][head["name"]] != head["hash"]:   
+        if head["name"] == 'DETACHED':          
+            checkoutSnapshot(None, specRef = refs["B"][head["name"]], force=True, reset=True)
+        else:
+            checkoutSnapshot(None, specRef = head["name"], force=True, reset=True)
         
 def fetchChanges(args):
     config = getResource("remote_config")
