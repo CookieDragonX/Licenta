@@ -4,16 +4,18 @@ import sys
 import json
 import shutil
 
-def getResource(name, specificPath=None):
+def getResource(name, specificPath=None, rconfig = False):
     #for all json objects in .cookie dir
-    if specificPath:
-        if not os.path.isdir(specificPath):
+    if specificPath or rconfig:
+        if specificPath == '':
+            path = name
+        elif not os.path.isdir(specificPath):
             printColor("[DEV ERROR][getResource] Cannot find resource '{}' at '{}'.".format(name, specificPath), "red")
             sys.exit(1)
         path=os.path.join(specificPath, name)
     elif name not in ["head", "history", "index", "refs", "staged", "unstaged", "userdata", "logs", "remote_config"]:
         printColor("[DEV ERROR][getResource] Unknown resource '{}'.".format(name), "red")
-        sys.exit(1)  
+        sys.exit(1) 
     else:
         path=os.path.join(".cookie", name)
     with open(path, "r") as fp:
@@ -52,16 +54,18 @@ def safeWrite(path, content, jsonDump=False, binary=False):
         os.rename(bak, path)
 
 def clearDir(dir):
-    for filename in os.listdir(dir):
-        file_path = os.path.join(dir, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
-
+    try:
+        for filename in os.listdir(dir):
+            file_path = os.path.join(dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
+    except FileNotFoundError:
+        pass
 def createDirectoryStructure(args):
     project_dir=os.path.join(args.path, '.cookie')
     try:

@@ -82,13 +82,16 @@ def undo_checkout(args,indexToUndo):
         checkoutSnapshot(None, specRef=oldHead["hash"], reset=args["r"], force=args["f"])
     else:
         checkoutSnapshot(None, specRef=oldHead["name"], reset=args["r"], force=args["f"])
-    restoreResource("staged")
+    restoreResource(indexToUndo, "staged")
     try:
         shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
     except FileNotFoundError:
         pass
     #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
-    shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    try:
+        shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    except:
+        pass
     clearCache(indexToUndo)
 
 def undo_create_branch(args,indexToUndo):
