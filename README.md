@@ -18,7 +18,8 @@
 - pyinstaller: https://pyinstaller.org/en/stable/
 - external libraries: ```shutil, paramiko, diff-match-patch, psutil, termcolor, colorama``` (install with pip)
 
-# BUILD COMMAND: "pyinstaller cookie"</br>
+# BUILD COMMAND:
+```"pyinstaller cookie"```
   - exe at 'C:\<LOCAL PATH>\dist\cookie\cookie.exe'
   - create env variable with 'C:\<LOCAL PATH>\dist\cookie'
   - MUST HAVE pyinstaller INSTALLED: https://pyinstaller.org/en/stable/installation.html </br>
