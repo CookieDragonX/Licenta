@@ -106,24 +106,29 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
         dataIsBinary = True
 
     if dataIsBinary:
-        printColor("Found conflict in file '{}'.".format(filename), "red")
+        printColor("Found conflict in file '{}' and can't solve manually since data is encoded.".format(filename), "red")
         opt = None
-        while opt not in ['t', 's', 'm', 'q']:
+        while opt not in ['t', 's', 'q']:
             print("========================================================================")
             print     (" <> Options:")
             print     ("    [t] --> Choose content of merge target.")
             print     ("    [s] --> Choose content of merge source.")
             printColor("    [q] --> Quit merging...", "red")
             print("========================================================================")
+            opt = input("Please provide an option: ").lower()
+            if opt not in ['t', 's', 'q']:
+                printColor("Please choose a valid option!", "red")
         if opt == 'q':
             printColor(" <> Aborting merge...", "red", "red")
             sys.exit(1)
         elif opt == 't':
             printColor(" <> '{}' file receives target content...".format(filename), "cyan")
             mergedContent = targetBlob.content
+            hasConflict = False
         elif opt == 's':
             printColor(" <> '{}' file receives source content...".format(filename), "cyan")
             mergedContent = sourceBlob.content
+            hasConflict = False
     else:
         mergedContent, hasConflict = merge(sourceString, targetString, baseString)
         mergedContent = mergedContent.encode("utf-8")

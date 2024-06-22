@@ -2,7 +2,6 @@ import os
 from libs.objectLib.ObjectManager import load, getObjectType, getSnapshotFromCommit
 from utils.prettyPrintLib import printColor
 import sys
-from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 import shutil
@@ -58,6 +57,7 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
     except FileNotFoundError:
         # checkout one after another, index_cache missing at that moment
         pass
+
 
 def resetToSnapshot(hash, reset=False):
     objectsPath = os.path.join('.cookie', 'objects')

@@ -47,6 +47,9 @@ def getTargetDirs():
 
 def createCommit(args, DEBUG=False):
     head=getResource("head")
+    if head["name"] == 'DETACHED':
+        printColor("Cannot create commit on detached head, please checkout a branch...", "red")
+        sys.exit(1)
     if head['tag']:
         printColor("Cannot create commit on tag...", "red")
         sys.exit(1)
@@ -282,7 +285,7 @@ def resolveModifiedStaging(pathname, staged, index):
         with open(pathname, 'r+b') as fp:
             newContent=fp.read()
         if recordedBlob.content==newContent:
-            if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
+            if oldStats['uid']!=staged['M'][pathname]['uid'] or oldStats['gid']!=staged['M'][pathname]['gid'] or oldStats['mode']!=staged['M'][pathname]['mode']:
                 staged['T'][pathname]=staged['M'][pathname]
                 del staged['M'][pathname]
             else:
@@ -329,13 +332,17 @@ def resolveModifiedStaging(pathname, staged, index):
         del staged['M'][pathname]
         del staged['C'][pathname]
     elif pathname in staged['T'] or pathname in staged['X']:
+        if pathname in staged['T']:
+            type = 'T'
+        else:
+            type = 'X'
         oldStats=deepcopy(index[pathname])
         recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
         with open(pathname, 'r+b') as fp:
             newContent=fp.read()
         if recordedBlob.content==newContent:
-            if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
+            if oldStats['uid']!=staged[type][pathname]['uid'] or oldStats['gid']!=staged[type][pathname]['gid'] or oldStats['mode']!=staged[type][pathname]['mode']:
                 staged['T'][pathname]=staged['M'][pathname]
                 del staged['M'][pathname]
             else:
@@ -386,7 +393,7 @@ def populateDifferences(dir, index, staged, differences):
         # print(stats)                                                  #DEBUG FOR RANDOM MODIFIED FILES
         # print(itemData)
         if itemData!=stats and not S_ISDIR(mode.st_mode):
-            if item not in staged["M"]:
+            if item not in staged["M"] and item not in staged["X"] and item not in staged["T"]:
                 differences['M'].update({item: statDictionary(mode)})
     #check files different to staging area
     for item in staged['A']:
@@ -431,7 +438,7 @@ def populateDifferences(dir, index, staged, differences):
         if not os.path.exists(item):
             differences['D'].update({item: staged['X'][item]})
         mode = os.lstat(item)
-        if statDictionary(mode) != staged['X'][item][1]:
+        if statDictionary(mode) != staged['X'][item]:
             differences['M'].update({item: statDictionary(mode)})
     #check for new files
     findNewFiles(dir, index, staged, differences)
@@ -514,6 +521,9 @@ def generateStatus(args, quiet=True):
 
 def stageFiles(paths):
     head=getResource("head")
+    if head["name"] == 'DETACHED':
+        printColor("Cannot stage files on detached head, please checkout a branch...", "red")
+        sys.exit(1)
     if head["tag"]:
         printColor("Cannot stage files on a tag...", "red")
         exit(1)
