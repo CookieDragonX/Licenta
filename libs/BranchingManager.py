@@ -30,8 +30,8 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
             sys.exit(1)
         if objType != 'C':
             printColor("[DEV ERROR][checkoutSnapshot] That's not the hash of a commit, where did you get that?", "red") 
-            sys.exit(1)                                                                             #there's improvement to be done here
-        snapshot=getSnapshotFromCommit(ref, objectsPath)                                       #get snapshot and raise notACommitError
+            sys.exit(1)
+        snapshot=getSnapshotFromCommit(ref, objectsPath)
         commitHash=ref
     else:
         try:
@@ -57,7 +57,6 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
     except FileNotFoundError:
         # checkout one after another, index_cache missing at that moment
         pass
-
 
 def resetToSnapshot(hash, reset=False):
     objectsPath = os.path.join('.cookie', 'objects')
@@ -135,7 +134,7 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         refs["B"][branchName]=ref
     dumpResource("refs", refs)
     if checkout:
-        checkoutSnapshot(None, specRef=branchName)
+        checkoutSnapshot(None, specRef=branchName, force=True)
 
 def createTag(tagName, currentRef=True, ref=None, checkout=False):
     head=getResource("head")
@@ -159,7 +158,7 @@ def createTag(tagName, currentRef=True, ref=None, checkout=False):
         refs["T"][tagName]=ref
     dumpResource("refs", refs)
     if checkout:
-        checkoutSnapshot(None, specRef=tagName)
+        checkoutSnapshot(None, specRef=tagName, force=True)
 
 
 

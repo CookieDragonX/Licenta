@@ -96,6 +96,23 @@ def undo_checkout(args,indexToUndo):
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
+    if args["c"]:
+        oldHead = getResource("head", specificPath=os.path.join(".cookie", "cache", "undo_cache", str(indexToUndo)))
+        if oldHead["name"]=='DETACHED':
+            checkoutSnapshot(None, specRef=oldHead["hash"])
+        else:
+            checkoutSnapshot(None, specRef=oldHead["name"])
+        try:
+            shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+        except FileNotFoundError:
+            pass
+        #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+        try:
+            shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+        except:
+            pass
+        restoreResource(indexToUndo, "staged")
+    clearCache(indexToUndo)
 
 def undo_delete_branch(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
@@ -106,6 +123,23 @@ def undo_delete_branch(args,indexToUndo):
 
 def undo_create_tag(args,indexToUndo):
     deleteTag(args["tag"])
+    if args["c"]:
+        oldHead = getResource("head", specificPath=os.path.join(".cookie", "cache", "undo_cache", str(indexToUndo)))
+        if oldHead["name"]=='DETACHED':
+            checkoutSnapshot(None, specRef=oldHead["hash"])
+        else:
+            checkoutSnapshot(None, specRef=oldHead["name"])
+        try:
+            shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+        except FileNotFoundError:
+            pass
+        #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+        try:
+            shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+        except:
+            pass
+        restoreResource(indexToUndo, "staged")
+    clearCache(indexToUndo)
 
 def undo_delete_tag(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")

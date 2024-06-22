@@ -526,7 +526,7 @@ def stageFiles(paths):
         sys.exit(1)
     if head["tag"]:
         printColor("Cannot stage files on a tag...", "red")
-        exit(1)
+        sys.exit(1)
     staged=getResource("staged")
     unstaged=getResource("unstaged")
     index=getResource("index")

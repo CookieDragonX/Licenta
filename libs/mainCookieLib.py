@@ -422,9 +422,11 @@ def checkout(args):
         deleteAddedFiles()
 
 @cookieRepoCertified
-@addToUndoCache()
+@addToUndoCache(saveResource=["head", "staged"])
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
+    if args.c:
+        clearStagedFiles()
 
 @cookieRepoCertified    
 @addToUndoCache()
@@ -432,9 +434,11 @@ def delete_branch(args):
     deleteBranch(args.branch)
 
 @cookieRepoCertified
-@addToUndoCache()
+@addToUndoCache(saveResource=["head", "staged"])
 def create_tag(args):
     createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
+    if args.c:
+        clearStagedFiles()
 
 @cookieRepoCertified
 @addToUndoCache()
