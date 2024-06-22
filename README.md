@@ -40,6 +40,8 @@
   - REMOTE TESTS ARE DISABLED BY DEFAULT</br>
   
 # COMMANDS:
+ - see command arguments:```cookie <command name> -h/--help```
+
 ```
     init                Initialize a new, empty repository.
     add                 Add a file to staging area.
