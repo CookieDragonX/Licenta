@@ -179,7 +179,7 @@ def deleteBranch(branchName):
     head=getResource("head")
     refs=getResource("refs") 
     if branchName not in refs['B']:
-        printColor("No such branch to be deleted {}".format(branchName))
+        printColor("No such branch to be deleted {}".format(branchName), "red")
         sys.exit(1)
     undoInfo=refs['B'][branchName]
     if head["name"]==branchName:
@@ -202,7 +202,7 @@ def deleteTag(tagName):
     head=getResource("head")
     refs=getResource("refs") 
     if tagName not in refs['T']:
-        printColor("No such branch to be deleted {}".format(tagName))
+        printColor("No such branch to be deleted {}".format(tagName), "red")
         sys.exit(1)
     undoInfo=refs['T'][tagName]
     if head["name"]==tagName:

@@ -75,7 +75,8 @@ def createCommit(args, DEBUG=False):
             sys.exit(0)
         else:
             metaData.append(userdata['user'])
-    metaData.append(args.message)
+    message = "".join(args.message.split("?"))
+    metaData.append(message)
     metaData.append(str(time()))
     targetDirs=getTargetDirs()
     ignoreDirs=getDeletedFiles()
