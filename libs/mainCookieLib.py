@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-import shutil
+import traceback
 
 # implemented libs and functions
 from utils.prettyPrintLib import printColor
@@ -282,52 +282,57 @@ argsp.add_argument("index",
 
 
 def main(argv=sys.argv[1:]):
-    args = argparser.parse_args(argv)
-    if args.command == 'add':               # add files to staging area
-        add(args)
-    elif args.command == 'remove':          # remove files from staging area
-        remove(args)
-    elif args.command == 'init':            # initialize cookie repository
-        init(args)
-    elif args.command == 'commit':          # commit staging area
-        commit(args)
-    elif args.command == 'checkout':        # checkout branch/tag/commit
-        checkout(args)
-    elif args.command == 'create_branch':   # create a branch
-        create_branch(args)
-    elif args.command == 'delete_branch':   # delete a branch
-        delete_branch(args)
-    elif args.command == 'create_tag':      # create a tag
-        create_tag(args)
-    elif args.command == 'delete_tag':      # delete a tag
-        delete_tag(args)
-    elif args.command == 'status':          # show status
-        status(args)
-    elif args.command == 'login':           # login with username/email
-        login(args)
-    # elif args.command == 'delete':          # delete repo DEV ONLY!
-    #     delete(args)
-    elif args.command == 'undo':            # undo last command
-        undo(args)
-    elif args.command == 'log':             # log show commits
-        log(args)
-    elif args.command == 'merge':           # merge two branches/two commits
-        merge(args)
-    elif args.command == 'clone':           # clone remote
-        clone(args)
-    elif args.command == 'rconfig':         # configure remote data
-        rconfig(args)
-    elif args.command == 'clear':           # clear local data
-        clear(args)
-    elif args.command == 'pull':            # pull data from remote
-        pull(args)
-    elif args.command == 'push':            # pull data from remote
-        push(args)
-    elif args.command == 'fetch':           # fetch data from remote
-        fetch(args)
-    else:
-        printColor("Unknown command: {}".format(args.command),'red')
-        sys.exit(1)
+    try:
+        args = argparser.parse_args(argv)
+        if args.command == 'add':               # add files to staging area
+            add(args)
+        elif args.command == 'remove':          # remove files from staging area
+            remove(args)
+        elif args.command == 'init':            # initialize cookie repository
+            init(args)
+        elif args.command == 'commit':          # commit staging area
+            commit(args)
+        elif args.command == 'checkout':        # checkout branch/tag/commit
+            checkout(args)
+        elif args.command == 'create_branch':   # create a branch
+            create_branch(args)
+        elif args.command == 'delete_branch':   # delete a branch
+            delete_branch(args)
+        elif args.command == 'create_tag':      # create a tag
+            create_tag(args)
+        elif args.command == 'delete_tag':      # delete a tag
+            delete_tag(args)
+        elif args.command == 'status':          # show status
+            status(args)
+        elif args.command == 'login':           # login with username/email
+            login(args)
+        # elif args.command == 'delete':          # delete repo DEV ONLY!
+        #     delete(args)
+        elif args.command == 'undo':            # undo last command
+            undo(args)
+        elif args.command == 'log':             # log show commits
+            log(args)
+        elif args.command == 'merge':           # merge two branches/two commits
+            merge(args)
+        elif args.command == 'clone':           # clone remote
+            clone(args)
+        elif args.command == 'rconfig':         # configure remote data
+            rconfig(args)
+        elif args.command == 'clear':           # clear local data
+            clear(args)
+        elif args.command == 'pull':            # pull data from remote
+            pull(args)
+        elif args.command == 'push':            # pull data from remote
+            push(args)
+        elif args.command == 'fetch':           # fetch data from remote
+            fetch(args)
+        else:
+            printColor("Unknown command: {}".format(args.command),'red')
+            sys.exit(1)
+    except KeyboardInterrupt:
+        printColor("    <> Command interrupted, aborting...", "red")
+
+        
 
 def cookieRepoCertified(fct):       #decorator for functions that work with objects to that everything happens at correct repo location
     def inner(*args, **kwargs):
@@ -368,13 +373,17 @@ def addToUndoCache(fct, saveResource=[]):
         return rez
     return inner
 
-def init(args):
-    if args.s:
-        initializeServer(args)
-    else:
-        print(cookieWordArt)
-        checkRepositoryInSubdirs(args.path)
-        createDirectoryStructure(args)
+def init(args): 
+    try:
+        if args.s:
+            initializeServer(args)
+        else:
+            print(cookieWordArt)
+            checkRepositoryInSubdirs(args.path)
+            createDirectoryStructure(args)
+    except NotADirectoryError:
+        printColor("Given path is not a directory. Cannot create repository...", "red")
+        sys.exit(1)
 
 def clone(args):
     
@@ -422,9 +431,11 @@ def checkout(args):
         deleteAddedFiles()
 
 @cookieRepoCertified
-@addToUndoCache()
+@addToUndoCache(saveResource=["head", "staged"])
 def create_branch(args):
     createBranch(args.branch, args.ref==None, args.ref, checkout=args.c)
+    if args.c:
+        clearStagedFiles()
 
 @cookieRepoCertified    
 @addToUndoCache()
@@ -432,9 +443,11 @@ def delete_branch(args):
     deleteBranch(args.branch)
 
 @cookieRepoCertified
-@addToUndoCache()
+@addToUndoCache(saveResource=["head", "staged"])
 def create_tag(args):
     createTag(args.tag, args.ref==None, args.ref, checkout=args.c)
+    if args.c:
+        clearStagedFiles()
 
 @cookieRepoCertified
 @addToUndoCache()

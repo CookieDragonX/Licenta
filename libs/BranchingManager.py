@@ -2,7 +2,6 @@ import os
 from libs.objectLib.ObjectManager import load, getObjectType, getSnapshotFromCommit
 from utils.prettyPrintLib import printColor
 import sys
-from errors.BranchExistsException import BranchExistsException
 from errors.NoSuchObjectException import NoSuchObjectException
 from libs.BasicUtils import statDictionary, getResource, dumpResource, safeWrite
 import shutil
@@ -16,6 +15,7 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
     head=getResource("head")
     if head["name"] == ref and not force:
         printColor("Already on branch {}!".format(head["name"]), "cyan")
+        printColor("Use checkout with 'f' flag to force checkout...", "cyan")
         sys.exit(1)
     new_head='DETACHED'
     objectsPath = os.path.join('.cookie', 'objects')
@@ -31,8 +31,8 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
             sys.exit(1)
         if objType != 'C':
             printColor("[DEV ERROR][checkoutSnapshot] That's not the hash of a commit, where did you get that?", "red") 
-            sys.exit(1)                                                                             #there's improvement to be done here
-        snapshot=getSnapshotFromCommit(ref, objectsPath)                                       #get snapshot and raise notACommitError
+            sys.exit(1)
+        snapshot=getSnapshotFromCommit(ref, objectsPath)
         commitHash=ref
     else:
         try:
@@ -118,6 +118,9 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         printColor("Please commit something before creating branches!", "red")
         printColor("Merging won't be possible if branches start from different commits!", "red")
         sys.exit(1)
+    if branchName == "DETACHED":
+        printColor("Cannot name branch 'DETACHED' as name is used as ref point state...", "red")
+        sys.exit(1)
     if currentRef:
         ref=head["hash"]
     if not currentRef :
@@ -135,12 +138,15 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         refs["B"][branchName]=ref
     dumpResource("refs", refs)
     if checkout:
-        checkoutSnapshot(None, specRef=branchName)
+        checkoutSnapshot(None, specRef=branchName, force=True)
 
 def createTag(tagName, currentRef=True, ref=None, checkout=False):
     head=getResource("head")
     if head["hash"]=="":
         printColor("Please commit something before creating tags!", "red")
+        sys.exit(1)
+    if tagName == "DETACHED":
+        printColor("Cannot name tag 'DETACHED' as name is used as ref point state...", "red")
         sys.exit(1)
     if currentRef:
         ref=head["hash"]
@@ -159,7 +165,7 @@ def createTag(tagName, currentRef=True, ref=None, checkout=False):
         refs["T"][tagName]=ref
     dumpResource("refs", refs)
     if checkout:
-        checkoutSnapshot(None, specRef=tagName)
+        checkoutSnapshot(None, specRef=tagName, force=True)
 
 
 
@@ -178,7 +184,12 @@ def deleteBranch(branchName):
     undoInfo=refs['B'][branchName]
     if head["name"]==branchName:
         head["name"] = "DETACHED"
-    refs['D'][branchName] = refs['B'][branchName]
+    try:
+        refs['D'][branchName] = refs['B'][branchName]
+    except KeyError:
+        refs['D']=dict()
+        refs['D'][branchName] = refs['B'][branchName]
+
     del refs['B'][branchName]
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
@@ -196,7 +207,11 @@ def deleteTag(tagName):
     undoInfo=refs['T'][tagName]
     if head["name"]==tagName:
         head["name"] = "DETACHED"
-    refs['D'][tagName] = refs['T'][tagName]
+    try:
+        refs['D'][tagName] = refs['T'][tagName]
+    except KeyError:
+        refs['D']=dict()
+        refs['D'][tagName] = refs['T'][tagName]
     del refs['T'][tagName]
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
     os.makedirs(undoCachePath, exist_ok=True)

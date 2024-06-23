@@ -3,6 +3,8 @@ import json
 import subprocess
 import shutil
 import pytest
+from libs.BasicUtils import getResource
+
 
 if os.name == 'nt':
     interpreter = ["py", "-3"]
@@ -190,6 +192,38 @@ def test_branching4():
         interpreter + [os.path.join(cookiePath, 'cookie'), "checkout", "secondary_branch", "-rdf"],
     )
     assert not os.path.exists("new_file.txt")
+
+@pytest.mark.skipif(IGNORE_BRANCHING_TESTS,
+                    reason="IGNORE_BRANCHING_TESTS is True")
+def test_tagging1():
+    # at the end of test_branching1() we are on master with one commit
+    test_branching1()
+    subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "create_tag", "-t", "new_tag", "-c"]
+    )
+    with open('new_file.txt', 'w') as fp:
+        pass
+    result = subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "add", "."],
+        capture_output = True,
+        text = True 
+    )
+    assert "Cannot stage files on a tag..." in result.stdout
+
+@pytest.mark.skipif(IGNORE_BRANCHING_TESTS,
+                    reason="IGNORE_BRANCHING_TESTS is True")
+def test_tagging2():
+    # at the end of test_branching1() we are on master with one commit
+    test_tagging1()
+    subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "checkout", "master"]
+    )
+    subprocess.run(
+        interpreter + [os.path.join(cookiePath, 'cookie'), "delete_tag", "-t", "new_tag"]
+    )
+    refs = getResource("refs")
+    assert "new_tag" not in refs["T"]
+    assert "new_tag" in refs ["D"]
 
 @pytest.mark.skipif(IGNORE_BRANCHING_TESTS,
                     reason="IGNORE_BRANCHING_TESTS is True")

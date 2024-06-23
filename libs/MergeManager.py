@@ -8,6 +8,7 @@ from libs.BranchingManager import getSnapshotFromCommit, updateHead, resetToSnap
 from libs.BasicUtils import getResource, dumpResource, cacheFile
 from utils.prettyPrintLib import printColor
 from utils.stringMerge import merge
+from errors.NoSuchObjectException import NoSuchObjectException
 from time import time, sleep
 from libs.LogsManager import logCommit
 import subprocess
@@ -106,24 +107,29 @@ def mergeBlobs(target, source, base, objectsPath): #the args are hashes
         dataIsBinary = True
 
     if dataIsBinary:
-        printColor("Found conflict in file '{}'.".format(filename), "red")
+        printColor("Found conflict in file '{}' and can't solve manually since data is encoded.".format(filename), "red")
         opt = None
-        while opt not in ['t', 's', 'm', 'q']:
+        while opt not in ['t', 's', 'q']:
             print("========================================================================")
             print     (" <> Options:")
             print     ("    [t] --> Choose content of merge target.")
             print     ("    [s] --> Choose content of merge source.")
             printColor("    [q] --> Quit merging...", "red")
             print("========================================================================")
+            opt = input("Please provide an option: ").lower()
+            if opt not in ['t', 's', 'q']:
+                printColor("Please choose a valid option!", "red")
         if opt == 'q':
             printColor(" <> Aborting merge...", "red", "red")
             sys.exit(1)
         elif opt == 't':
             printColor(" <> '{}' file receives target content...".format(filename), "cyan")
             mergedContent = targetBlob.content
+            hasConflict = False
         elif opt == 's':
             printColor(" <> '{}' file receives source content...".format(filename), "cyan")
             mergedContent = sourceBlob.content
+            hasConflict = False
     else:
         mergedContent, hasConflict = merge(sourceString, targetString, baseString)
         mergedContent = mergedContent.encode("utf-8")
@@ -292,14 +298,23 @@ def createMergeCommit(target, source, commitToBranch=None):
 
     if getObjectType(targetSha, objectsPath) != 'C':
         printColor("Cannot merge into {} -- not a branch name or commit.".format(target), "red")
-
+        sys.exit(1)
+        
     if source in refs["B"]:
         sourceSha=refs["B"][source]
+    elif source in refs["T"]:
+        sourceSha=refs["T"][source]
     else:
         sourceSha=source
-    sourceTreeSha=getSnapshotFromCommit(sourceSha, objectsPath)
+    
+    if targetSha == sourceSha:
+        printColor("Given refs have the same commit sha, aborting merge...", "red")
+        sys.exit(1)
+
     if getObjectType(sourceSha, objectsPath) != 'C':
         printColor("Cannot merge from '{}' -- not a commit or a branch name".format(target), "red")
+    sourceTreeSha=getSnapshotFromCommit(sourceSha, objectsPath)
+
     mergeBase=getMergeBase(targetSha, sourceSha)
 
     if mergeBase == targetSha:
@@ -321,6 +336,7 @@ def createMergeCommit(target, source, commitToBranch=None):
                 printColor("Successfully merged changes to branch '{}'.".format(target), "green")
             else :
                 printColor("Merge target must be a branch...", "red")
+                sys.exit(1)
                 #TO DO: what do we do if merge target is a commit hash? ignore?
                 # depends if we commit all objects on push or just branch relevant ones!
                 # i think we ignore? 23.4
@@ -335,7 +351,7 @@ def createMergeCommit(target, source, commitToBranch=None):
         if userdata['user'] == "":
             printColor("Please login with a valid e-mail first!",'red')
             printColor("Use 'cookie login'",'white')
-            sys.exit(0)
+            sys.exit(1)
         else:
             metaData.append(userdata['user'])
             

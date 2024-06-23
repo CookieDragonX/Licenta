@@ -1,7 +1,7 @@
 import sys
 import os
 from utils.prettyPrintLib import printColor
-from libs.IndexManager import unstageFiles, stageFiles
+from libs.IndexManager import unstageFiles, stageFiles, generateStatus, deleteAddedFiles
 from libs.BranchingManager import deleteBranch, createBranch, checkoutSnapshot, deleteTag, createTag, resetToSnapshot
 from libs.BasicUtils import getResource, dumpResource
 import shutil
@@ -17,10 +17,15 @@ def getCacheContent(index, resource_name):
         
 
 def clearCache(index):
-    shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
-
+    try:
+        shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
+    except FileNotFoundError:
+        pass
 def undoCommand(args):
     history=getResource("history")
+    if history["index"]==0 :
+        printColor("Nothing to undo...", "red")
+        sys.exit(1)
     if args.index!=None:
         num_check=int(args.index)
         if num_check not in range(0, int(history["index"])):
@@ -96,6 +101,23 @@ def undo_checkout(args,indexToUndo):
 
 def undo_create_branch(args,indexToUndo):
     deleteBranch(args["branch"])
+    if args["c"]:
+        oldHead = getResource("head", specificPath=os.path.join(".cookie", "cache", "undo_cache", str(indexToUndo)))
+        if oldHead["name"]=='DETACHED':
+            checkoutSnapshot(None, specRef=oldHead["hash"])
+        else:
+            checkoutSnapshot(None, specRef=oldHead["name"])
+        try:
+            shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+        except FileNotFoundError:
+            pass
+        #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+        try:
+            shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+        except:
+            pass
+        restoreResource(indexToUndo, "staged")
+    clearCache(indexToUndo)
 
 def undo_delete_branch(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
@@ -106,6 +128,23 @@ def undo_delete_branch(args,indexToUndo):
 
 def undo_create_tag(args,indexToUndo):
     deleteTag(args["tag"])
+    if args["c"]:
+        oldHead = getResource("head", specificPath=os.path.join(".cookie", "cache", "undo_cache", str(indexToUndo)))
+        if oldHead["name"]=='DETACHED':
+            checkoutSnapshot(None, specRef=oldHead["hash"])
+        else:
+            checkoutSnapshot(None, specRef=oldHead["name"])
+        try:
+            shutil.rmtree(os.path.join(".cookie", "cache", "index_cache"))
+        except FileNotFoundError:
+            pass
+        #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
+        try:
+            shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+        except:
+            pass
+        restoreResource(indexToUndo, "staged")
+    clearCache(indexToUndo)
 
 def undo_delete_tag(args,indexToUndo):
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
@@ -125,7 +164,9 @@ def undo_merge(args, indexToUndo):
     restoreResource(indexToUndo, "staged")
     restoreResource(indexToUndo, "index")
     head = getResource("head")
-    resetToSnapshot(head["hash"], reset=True)
+    checkoutSnapshot(None, specRef=head["name"], reset=True, force=True)
+    generateStatus(None, quiet=True)
+    deleteAddedFiles()
     new_commit = getCacheContent(indexToUndo, "new_commit")
     os.remove(os.path.join(".cookie", "objects", new_commit[:2], new_commit[2:]))
     clearCache(indexToUndo)
@@ -146,7 +187,10 @@ def undo_commit(args, indexToUndo):
     except FileNotFoundError:
         pass
     #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
-    shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    try:
+        shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    except:
+        pass
     clearCache(indexToUndo)
 
 def undo_rconfig(args, indexToUndo):

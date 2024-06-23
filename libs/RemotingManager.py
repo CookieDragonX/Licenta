@@ -1,6 +1,7 @@
 from utils.prettyPrintLib import printColor
 from libs.BasicUtils import dumpResource, getResource, safeWrite
 from libs.BranchingManager import checkoutSnapshot
+from libs.objectLib.ObjectManager import load
 import paramiko
 import os
 from stat import S_ISDIR, S_ISREG
@@ -37,6 +38,12 @@ def getRemoteResource(sftp, remotePath, resourceName, sep):
     sftp.get(remoteResourcePath, os.path.join(localPath, resourceName))
     return getResource(resourceName, specificPath=localPath)
 
+def dumpRemoteResource(sftp, remotePath, resourceName, content, sep):
+    localPath = os.path.join(".cookie", "cache", "remote_cache")
+    safeWrite(os.path.join(localPath, resourceName), content, jsonDump=True)
+    remoteResourcePath = sep.join([remotePath, ".cookie", resourceName])
+    sftp.put(os.path.join(localPath, resourceName), remoteResourcePath)
+
 def pullDirectory(sftp, remotedir, localdir, sep):
     for entry in sftp.listdir_attr(remotedir):
         if localdir=='.':
@@ -55,7 +62,7 @@ def pullDirectory(sftp, remotedir, localdir, sep):
                 pass
             pullDirectory(sftp, remotepath, localpath, sep)
         elif S_ISREG(mode):
-            if "objects" in remotepath:
+            if "objects" in remotepath or "refs" in remotepath:
                 if os.path.exists(localpath):       # no point in replacing objects since they are unique
                     continue
             sftp.get(remotepath, localpath)
@@ -81,7 +88,7 @@ def pushDirectory(sftp, localdir, remotedir, sep, ignoreList):
             pushDirectory(sftp, localpath, remotepath, sep, ignoreList)
         elif S_ISREG(mode):
             if "objects" in remotepath:
-                if remotePathExists(sftp, remotepath):       # no point in replacing objects since they are unique
+                if remotePathExists(sftp, remotepath) or "refs" in remotepath:       # no point in replacing objects since they are unique
                     continue
             sftp.put(localpath, remotepath)
 
@@ -163,6 +170,9 @@ def cloneRepo(args):
 
 def remoteConfig(args):
     if args.file :
+        if not os.path.isfile(args.file):
+            printColor("Given path '{}' is not a file and cannot be used as config...".format(args.file), "red")
+            sys.exit(1)
         givenConfig = getResource(os.path.basename(args.file), specificPath=os.path.dirname(args.file))
         dumpResource("remote_config", givenConfig)
         printColor("Successfully updated remote configuration.", "green")
@@ -235,17 +245,23 @@ def pullChanges(args):
     
     refs = getResource("refs")
     head = getResource("head")
+    if head["name"] == "DETACHED":
+        printColor("Please checkout a branch before pulling changes...", "red")
+        sys.exit(1)
     remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
     if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
         printColor("Local branch is on par with remote branch.", "green")
         sys.exit(0)
+
+    refs["B"][head["name"]] = remoteRefs["B"][head["name"]]
 
     printColor("Pulling changes from remote, please wait...", "green")
     pullDirectory(sftp, remotePath, '.', sep)
     sftp.close()
     ssh_client.close()
     
-    refs = getResource("refs")
+    dumpResource("refs", refs)
+
     if refs["B"][head["name"]] != head["hash"]:   
         if head["name"] == 'DETACHED':          
             checkoutSnapshot(None, specRef = refs["B"][head["name"]], force=True, reset=True)
@@ -287,11 +303,22 @@ def fetchChanges(args):
     pullDirectory(sftp, remotePath, '.', sep)
     sftp.close()
     ssh_client.close()
-    
-    refs = getResource("refs")
-    if refs["B"][head["name"]] != head["hash"]:             
-        printColor("Your local branch is behind remote '{}'!".format(head["name"]), "red")
+    refs["B"][head["name"]] = remoteRefs["B"][head["name"]]
+    dumpResource("refs", refs)
+
+    if refs["B"][head["name"]] != head["hash"]:   
+        printColor("Local branch is different then remote, checkout to receive changes...", "green")
         
+def findParent(head, target):
+    currentCommit=load(head, os.path.join('.cookie', 'objects'))
+    while currentCommit.getHash()!="None":
+        if currentCommit.parents[0] == target:
+            return True
+        elif currentCommit.parents[0] == "None":
+            return False
+        else:
+            currentCommit = load(currentCommit.parents[0], os.path.join('.cookie', 'objects'))
+    return False
 
 def pushChanges(args):
     config = getResource("remote_config")
@@ -322,15 +349,6 @@ def pushChanges(args):
         sep = '/'
     sftp = ssh_client.open_sftp()
     remotePath = sep.join([config["remote_path"], "CookieRepositories", config["repo_name"]])
-    refs = getResource("refs")
-    head = getResource("head")
-    try:
-        remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
-        if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
-            printColor("Local branch is on par with remote branch.", "green")
-            sys.exit(0)
-    except FileNotFoundError:
-        printColor("This is the first push.", "green")
 
     try: 
         sftp.mkdir(remotePath)
@@ -343,10 +361,26 @@ def pushChanges(args):
         printColor("    <> Waiting to finish...", "cyan")
     while isLocked(sftp, remotePath):
         time.sleep(1)
+    refs = getResource("refs")
+    head = getResource("head")
+    try:
+        remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+        if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
+            printColor("Local branch is on par with remote branch.", "green")
+            printColor("Nothing to push...", "green")
+            sys.exit(1)
+        else:
+            if not findParent(refs["B"][head["name"]], remoteRefs["B"][head["name"]]):
+                printColor("New changes on remote branch, please pull or fetch first...", "red")
+                sys.exit(1)
+    except FileNotFoundError:
+        printColor("This is the first push.", "green")
     try:
         lockPath(sftp, remotePath)
         printColor("Pushing objects, please wait...", "green")
+        remoteRefs["B"][head["name"]] = refs["B"][head["name"]]
         pushDirectory(sftp, os.path.join(".cookie", "objects"), sep.join([remotePath, ".cookie", "objects"]), sep, [])
+        dumpRemoteResource(sftp, remotePath, "refs", remoteRefs, sep=sep)
         sftp.put(os.path.join(".cookie", "refs"), sep.join([remotePath, ".cookie", "refs.bak"]))
         sftp.put(os.path.join(".cookie", "logs"), sep.join([remotePath, ".cookie", "logs.bak"]))
         try:

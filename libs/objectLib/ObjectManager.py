@@ -41,8 +41,8 @@ def createBlob(path, forceContent):
 def getObjectType(hash, objectsPath = os.path.join(".cookie", "objects")):
     if not os.path.isfile(os.path.join(objectsPath, hash[:2], hash[2:])):
         raise NoSuchObjectException("No such object!")
-    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'r') as object:
-        objType=object.read(1)
+    with open(os.path.join(objectsPath, hash[:2], hash[2:]), 'rb') as object:
+        objType=object.read(1).decode()
     return objType
 
 

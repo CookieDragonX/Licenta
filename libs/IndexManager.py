@@ -8,7 +8,7 @@ from time import time
 from libs.BranchingManager import updateBranchSnapshot
 from libs.BasicUtils import statDictionary, dumpResource, getResource, cacheFile
 from libs.LogsManager import logCommit
-from libs.RemotingManager import getRemoteResource
+from libs.RemotingManager import getRemoteResource, findParent
 from copy import deepcopy
 import paramiko
 import traceback
@@ -47,6 +47,9 @@ def getTargetDirs():
 
 def createCommit(args, DEBUG=False):
     head=getResource("head")
+    if head["name"] == 'DETACHED':
+        printColor("Cannot create commit on detached head, please checkout a branch...", "red")
+        sys.exit(1)
     if head['tag']:
         printColor("Cannot create commit on tag...", "red")
         sys.exit(1)
@@ -282,7 +285,7 @@ def resolveModifiedStaging(pathname, staged, index):
         with open(pathname, 'r+b') as fp:
             newContent=fp.read()
         if recordedBlob.content==newContent:
-            if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
+            if oldStats['uid']!=staged['M'][pathname]['uid'] or oldStats['gid']!=staged['M'][pathname]['gid'] or oldStats['mode']!=staged['M'][pathname]['mode']:
                 staged['T'][pathname]=staged['M'][pathname]
                 del staged['M'][pathname]
             else:
@@ -329,13 +332,17 @@ def resolveModifiedStaging(pathname, staged, index):
         del staged['M'][pathname]
         del staged['C'][pathname]
     elif pathname in staged['T'] or pathname in staged['X']:
+        if pathname in staged['T']:
+            type = 'T'
+        else:
+            type = 'X'
         oldStats=deepcopy(index[pathname])
         recordedBlob=load(oldStats['hash'], os.path.join('.cookie', 'objects'))
         del oldStats['hash']
         with open(pathname, 'r+b') as fp:
             newContent=fp.read()
         if recordedBlob.content==newContent:
-            if oldStats['uid']!=staged[pathname]['uid'] or oldStats['gid']!=staged[pathname]['gid'] or oldStats['mode']!=staged[pathname]['mode']:
+            if oldStats['uid']!=staged[type][pathname]['uid'] or oldStats['gid']!=staged[type][pathname]['gid'] or oldStats['mode']!=staged[type][pathname]['mode']:
                 staged['T'][pathname]=staged['M'][pathname]
                 del staged['M'][pathname]
             else:
@@ -369,6 +376,8 @@ def populateDifferences(dir, index, staged, differences):
                 for renamedFile in staged['R']:
                     if item in staged['R'][renamedFile]:
                         addToDelete=False
+                if item in staged['C']:
+                    addToDelete=False
                 # for copiedFile in staged['C']:
                 #     if item in staged['C'][copiedFile]:
                 #         addToDelete=False
@@ -386,7 +395,7 @@ def populateDifferences(dir, index, staged, differences):
         # print(stats)                                                  #DEBUG FOR RANDOM MODIFIED FILES
         # print(itemData)
         if itemData!=stats and not S_ISDIR(mode.st_mode):
-            if item not in staged["M"]:
+            if item not in staged["M"] and item not in staged["X"] and item not in staged["T"]:
                 differences['M'].update({item: statDictionary(mode)})
     #check files different to staging area
     for item in staged['A']:
@@ -431,7 +440,7 @@ def populateDifferences(dir, index, staged, differences):
         if not os.path.exists(item):
             differences['D'].update({item: staged['X'][item]})
         mode = os.lstat(item)
-        if statDictionary(mode) != staged['X'][item][1]:
+        if statDictionary(mode) != staged['X'][item]:
             differences['M'].update({item: statDictionary(mode)})
     #check for new files
     findNewFiles(dir, index, staged, differences)
@@ -491,20 +500,43 @@ def generateStatus(args, quiet=True):
                 
                 refs = getResource("refs")
                 head = getResource("head")
-                remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
-                if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
-                    printColor("Local branch is on par with remote branch.", "green")
-                else:
-                    printColor("Local branch is behind remote branch.", "red")
-                    printColor("Please use 'cookie pull' before comitting.", "green")
+                if head["name"]!='DETACHED':
+                    remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+                    if refs["B"][head["name"]] == remoteRefs["B"][head["name"]]:
+                        printColor("Local branch on par with remote branch...", "green")
+                    elif not findParent(refs["B"][head["name"]], remoteRefs["B"][head["name"]]):
+                        printColor("New changes on remote branch, please pull or fetch before pushing...", "red")
+                    else:
+                        printColor("New changes to push on branch {}...".format(head['name']), "green")
             except:
                 printColor("Could not resolve remote, please check configuration.", "red")
                 printColor("Unless this is before first push, in which case all is good!", "red")
         
+        refType = None
+
+        if head["name"] in refs["B"]:
+            refType = "branch"
+        elif head["name"] in refs["T"]:
+            refType = "tag"
+        elif head["name"] == "DETACHED":
+            refType = "DETACHED"
+        
+        if not refType:
+            printColor("[DEV ERROR][generateStatus] Unknown refType!","red")
+            sys.exit(1)
+
         if head['hash']=='':
-            printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
+            if refType != "DETACHED":
+                printColor("    <> On {} '{}', no commits yet...".format(refType, head["name"]), "white")
+            else:
+                printColor("    <> Head detached with no commits. How did this happen?", "red")
+                sys.exit(1)
         else:
-            printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")
+            if refType != "DETACHED":
+                printColor("    <> On {} '{}', commit '{}'.".format(refType, head["name"], head["hash"]), "white")
+            else:
+                printColor("    <> Head detached, commit hash '{}', please checkout a branch.".format(head["hash"]), "white")
+                sys.exit(1)
         outputStaged=False
         outputStaged=printStaged()
         outputUnstaged=False
@@ -514,9 +546,12 @@ def generateStatus(args, quiet=True):
 
 def stageFiles(paths):
     head=getResource("head")
+    if head["name"] == 'DETACHED':
+        printColor("Cannot stage files on detached head, please checkout a branch...", "red")
+        sys.exit(1)
     if head["tag"]:
         printColor("Cannot stage files on a tag...", "red")
-        exit(1)
+        sys.exit(1)
     staged=getResource("staged")
     unstaged=getResource("unstaged")
     index=getResource("index")
