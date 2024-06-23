@@ -184,7 +184,12 @@ def deleteBranch(branchName):
     undoInfo=refs['B'][branchName]
     if head["name"]==branchName:
         head["name"] = "DETACHED"
-    refs['D'][branchName] = refs['B'][branchName]
+    try:
+        refs['D'][branchName] = refs['B'][branchName]
+    except KeyError:
+        refs['D']=dict()
+        refs['D'][branchName] = refs['B'][branchName]
+
     del refs['B'][branchName]
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "branches")
     os.makedirs(undoCachePath, exist_ok=True)
@@ -202,7 +207,11 @@ def deleteTag(tagName):
     undoInfo=refs['T'][tagName]
     if head["name"]==tagName:
         head["name"] = "DETACHED"
-    refs['D'][tagName] = refs['T'][tagName]
+    try:
+        refs['D'][tagName] = refs['T'][tagName]
+    except KeyError:
+        refs['D']=dict()
+        refs['D'][tagName] = refs['T'][tagName]
     del refs['T'][tagName]
     undoCachePath=os.path.join(".cookie", "cache", "undo_cache", "tags")
     os.makedirs(undoCachePath, exist_ok=True)

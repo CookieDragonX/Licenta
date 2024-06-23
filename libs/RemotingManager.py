@@ -170,6 +170,9 @@ def cloneRepo(args):
 
 def remoteConfig(args):
     if args.file :
+        if not os.path.isfile(args.file):
+            printColor("Given path '{}' is not a file and cannot be used as config...".format(args.file), "red")
+            sys.exit(1)
         givenConfig = getResource(os.path.basename(args.file), specificPath=os.path.dirname(args.file))
         dumpResource("remote_config", givenConfig)
         printColor("Successfully updated remote configuration.", "green")

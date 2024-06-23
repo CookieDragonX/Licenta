@@ -17,10 +17,15 @@ def getCacheContent(index, resource_name):
         
 
 def clearCache(index):
-    shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
-
+    try:
+        shutil.rmtree(os.path.join(".cookie", "cache", "undo_cache", str(index)))
+    except FileNotFoundError:
+        pass
 def undoCommand(args):
     history=getResource("history")
+    if history["index"]==0 :
+        printColor("Nothing to undo...", "red")
+        sys.exit(1)
     if args.index!=None:
         num_check=int(args.index)
         if num_check not in range(0, int(history["index"])):
@@ -182,7 +187,10 @@ def undo_commit(args, indexToUndo):
     except FileNotFoundError:
         pass
     #os.makedirs(os.path.join(".cookie", "cache", "index_cache"), exist_ok=True)
-    shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    try:
+        shutil.move(os.path.join(".cookie", "cache", "undo_cache", indexToUndo, "index_cache"), os.path.join(".cookie", "cache"))
+    except:
+        pass
     clearCache(indexToUndo)
 
 def undo_rconfig(args, indexToUndo):

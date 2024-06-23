@@ -376,6 +376,8 @@ def populateDifferences(dir, index, staged, differences):
                 for renamedFile in staged['R']:
                     if item in staged['R'][renamedFile]:
                         addToDelete=False
+                if item in staged['C']:
+                    addToDelete=False
                 # for copiedFile in staged['C']:
                 #     if item in staged['C'][copiedFile]:
                 #         addToDelete=False
@@ -510,10 +512,31 @@ def generateStatus(args, quiet=True):
                 printColor("Could not resolve remote, please check configuration.", "red")
                 printColor("Unless this is before first push, in which case all is good!", "red")
         
+        refType = None
+
+        if head["name"] in refs["B"]:
+            refType = "branch"
+        elif head["name"] in refs["T"]:
+            refType = "tag"
+        elif head["name"] == "DETACHED":
+            refType = "DETACHED"
+        
+        if not refType:
+            printColor("[DEV ERROR][generateStatus] Unknown refType!","red")
+            sys.exit(1)
+
         if head['hash']=='':
-            printColor("    <> On branch '{}', no commits yet...".format(head["name"]), "white")
+            if refType != "DETACHED":
+                printColor("    <> On {} '{}', no commits yet...".format(refType, head["name"]), "white")
+            else:
+                printColor("    <> Head detached with no commits. How did this happen?", "red")
+                sys.exit(1)
         else:
-            printColor("    <> On branch '{}', commit '{}'.".format(head["name"], head["hash"]), "white")
+            if refType != "DETACHED":
+                printColor("    <> On {} '{}', commit '{}'.".format(refType, head["name"], head["hash"]), "white")
+            else:
+                printColor("    <> Head detached, commit hash '{}', please checkout a branch.".format(head["hash"]), "white")
+                sys.exit(1)
         outputStaged=False
         outputStaged=printStaged()
         outputUnstaged=False

@@ -8,6 +8,7 @@ from libs.BranchingManager import getSnapshotFromCommit, updateHead, resetToSnap
 from libs.BasicUtils import getResource, dumpResource, cacheFile
 from utils.prettyPrintLib import printColor
 from utils.stringMerge import merge
+from errors.NoSuchObjectException import NoSuchObjectException
 from time import time, sleep
 from libs.LogsManager import logCommit
 import subprocess
@@ -301,14 +302,19 @@ def createMergeCommit(target, source, commitToBranch=None):
         
     if source in refs["B"]:
         sourceSha=refs["B"][source]
+    elif source in refs["T"]:
+        sourceSha=refs["T"][source]
     else:
         sourceSha=source
+    
     if targetSha == sourceSha:
         printColor("Given refs have the same commit sha, aborting merge...", "red")
         sys.exit(1)
-    sourceTreeSha=getSnapshotFromCommit(sourceSha, objectsPath)
+
     if getObjectType(sourceSha, objectsPath) != 'C':
         printColor("Cannot merge from '{}' -- not a commit or a branch name".format(target), "red")
+    sourceTreeSha=getSnapshotFromCommit(sourceSha, objectsPath)
+
     mergeBase=getMergeBase(targetSha, sourceSha)
 
     if mergeBase == targetSha:
@@ -345,7 +351,7 @@ def createMergeCommit(target, source, commitToBranch=None):
         if userdata['user'] == "":
             printColor("Please login with a valid e-mail first!",'red')
             printColor("Use 'cookie login'",'white')
-            sys.exit(0)
+            sys.exit(1)
         else:
             metaData.append(userdata['user'])
             

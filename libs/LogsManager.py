@@ -37,6 +37,7 @@ def logSequence(args):
     trackHistory=[]
     key = None
     while key != 'q':
+        key = None
         trackHistory.append(currentCommit)
         printCommitData(currentCommit)
         if len(trackHistory) > 1:
