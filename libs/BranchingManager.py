@@ -15,6 +15,7 @@ def checkoutSnapshot(args, specRef = None, force=False, reset=False):
     head=getResource("head")
     if head["name"] == ref and not force:
         printColor("Already on branch {}!".format(head["name"]), "cyan")
+        printColor("Use checkout with 'f' flag to force checkout...", "cyan")
         sys.exit(1)
     new_head='DETACHED'
     objectsPath = os.path.join('.cookie', 'objects')
@@ -117,6 +118,9 @@ def createBranch(branchName, currentRef=True, ref=None, checkout=False):
         printColor("Please commit something before creating branches!", "red")
         printColor("Merging won't be possible if branches start from different commits!", "red")
         sys.exit(1)
+    if branchName == "DETACHED":
+        printColor("Cannot name branch 'DETACHED' as name is used as ref point state...", "red")
+        sys.exit(1)
     if currentRef:
         ref=head["hash"]
     if not currentRef :
@@ -140,6 +144,9 @@ def createTag(tagName, currentRef=True, ref=None, checkout=False):
     head=getResource("head")
     if head["hash"]=="":
         printColor("Please commit something before creating tags!", "red")
+        sys.exit(1)
+    if tagName == "DETACHED":
+        printColor("Cannot name tag 'DETACHED' as name is used as ref point state...", "red")
         sys.exit(1)
     if currentRef:
         ref=head["hash"]

@@ -8,7 +8,7 @@ from time import time
 from libs.BranchingManager import updateBranchSnapshot
 from libs.BasicUtils import statDictionary, dumpResource, getResource, cacheFile
 from libs.LogsManager import logCommit
-from libs.RemotingManager import getRemoteResource
+from libs.RemotingManager import getRemoteResource, findParent
 from copy import deepcopy
 import paramiko
 import traceback
@@ -498,12 +498,14 @@ def generateStatus(args, quiet=True):
                 
                 refs = getResource("refs")
                 head = getResource("head")
-                remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
-                if refs["B"][head["name"]] ==  remoteRefs["B"][head["name"]]:
-                    printColor("Local branch is on par with remote branch.", "green")
-                else:
-                    printColor("Local branch is behind remote branch.", "red")
-                    printColor("Please use 'cookie pull' before comitting.", "green")
+                if head["name"]!='DETACHED':
+                    remoteRefs = getRemoteResource(sftp, remotePath, "refs", sep)
+                    if refs["B"][head["name"]] == remoteRefs["B"][head["name"]]:
+                        printColor("Local branch on par with remote branch...", "green")
+                    elif not findParent(refs["B"][head["name"]], remoteRefs["B"][head["name"]]):
+                        printColor("New changes on remote branch, please pull or fetch before pushing...", "red")
+                    else:
+                        printColor("New changes to push on branch {}...".format(head['name']), "green")
             except:
                 printColor("Could not resolve remote, please check configuration.", "red")
                 printColor("Unless this is before first push, in which case all is good!", "red")

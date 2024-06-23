@@ -72,6 +72,8 @@ def logSequence(args):
             trackHistory.pop()
             trackHistory.pop()
 
+
+
 # @wrapper
 # def logCommits(stdscr, hash):
 #     commit=load(hash, os.path.join(".cookie", "objects"))

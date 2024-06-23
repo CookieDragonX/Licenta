@@ -297,11 +297,15 @@ def createMergeCommit(target, source, commitToBranch=None):
 
     if getObjectType(targetSha, objectsPath) != 'C':
         printColor("Cannot merge into {} -- not a branch name or commit.".format(target), "red")
-
+        sys.exit(1)
+        
     if source in refs["B"]:
         sourceSha=refs["B"][source]
     else:
         sourceSha=source
+    if targetSha == sourceSha:
+        printColor("Given refs have the same commit sha, aborting merge...", "red")
+        sys.exit(1)
     sourceTreeSha=getSnapshotFromCommit(sourceSha, objectsPath)
     if getObjectType(sourceSha, objectsPath) != 'C':
         printColor("Cannot merge from '{}' -- not a commit or a branch name".format(target), "red")
@@ -326,6 +330,7 @@ def createMergeCommit(target, source, commitToBranch=None):
                 printColor("Successfully merged changes to branch '{}'.".format(target), "green")
             else :
                 printColor("Merge target must be a branch...", "red")
+                sys.exit(1)
                 #TO DO: what do we do if merge target is a commit hash? ignore?
                 # depends if we commit all objects on push or just branch relevant ones!
                 # i think we ignore? 23.4
