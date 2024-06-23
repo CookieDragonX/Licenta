@@ -8,7 +8,7 @@
 ```
 
 # ==============================</br>
-# Cookie File Versioning System</br>
+# Cookie Version Control System</br>
 ###  Milencovici Radoliub Vlad</br>
 ### https://github.com/CookieDragonX/Licenta</br>
 # ==============================</br>
