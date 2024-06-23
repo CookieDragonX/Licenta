@@ -150,7 +150,11 @@ def cloneRepo(args):
         printColor("Directory {} exists and is not empty. Aborting...".format(full_local_path), "red")
         sys.exit(1)
     printColor("Cloning repository {} to {}...".format(args.name, full_local_path), "green")
-    pullDirectory(sftp, full_remote_path, full_local_path, sep)
+    try:
+        pullDirectory(sftp, full_remote_path, full_local_path, sep)
+    except FileNotFoundError:
+        printColor("Please make sure given remote repository exists...", "red")
+        sys.exit(1)
     sftp.close()
     ssh_client.close()
     os.chdir(full_local_path)
